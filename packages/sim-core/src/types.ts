@@ -1,17 +1,13 @@
-import type seedrandom from "seedrandom";
+import type { CommandEnvelope } from "@industrial/net-protocol";
 
 export type MatchInput = {
   seed: string;
 };
 
-export type SimCommand = {
-  playerId: string;
-  type: string;
-};
+export type SimCommand = CommandEnvelope;
 
 export type MatchState = {
   tick: number;
   seed: string;
-  rng: seedrandom.PRNG;
   resources: Record<string, number>;
 };

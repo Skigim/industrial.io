@@ -1,17 +1,20 @@
 import { fnv1a32 } from "@industrial/net-protocol";
-import seedrandom from "seedrandom";
 
+import { attachRandomState } from "./random.js";
 import { runMovement } from "./systems/movement.js";
 import { runProduction } from "./systems/production.js";
 import type { MatchInput, MatchState, SimCommand } from "./types.js";
 
 export function createMatch(input: MatchInput): MatchState {
-  return {
+  const state: MatchState = {
     tick: 0,
     seed: input.seed,
-    rng: seedrandom(input.seed),
     resources: { p1: 100, p2: 100 }
   };
+
+  attachRandomState(state, input.seed);
+
+  return state;
 }
 
 export function stepMatch(
