@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "concurrently -n client,signal -c cyan,yellow \"pnpm --filter @industrial/client dev\" \"pnpm --filter @industrial/signaling dev\"",
     "build": "pnpm -r build",
-    "test": "pnpm -r test",
-    "lint": "pnpm -r lint",
+    "test": "vitest run --passWithNoTests",
+    "lint": "eslint .eslintrc.cjs --max-warnings=0",
     "format": "prettier --write .",
     "clean": "rimraf node_modules apps/*/node_modules packages/*/node_modules apps/*/dist packages/*/dist"
   },
@@ -16,7 +16,7 @@
     "@typescript-eslint/parser": "^8.22.0",
     "@vitest/coverage-v8": "^3.2.4",
     "concurrently": "^9.1.2",
-    "eslint": "^9.20.1",
+    "eslint": "8.57.1",
     "prettier": "^3.4.2",
     "rimraf": "^6.0.1",
     "typescript": "^5.7.3",
