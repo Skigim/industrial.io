@@ -77,6 +77,29 @@ describe("sim-core determinism", () => {
     expect(runTicks("seed-1", commands)).toBe(runTicks("seed-1", commands));
   });
 
+  it("produces identical hash for semantically equivalent per-tick command orderings", () => {
+    const ordered = new Map<number, readonly CommandEnvelope[]>([
+      [
+        0,
+        [
+          queueUnitCommand(0, "x", 1),
+          queueUnitCommand(0, "y", 1)
+        ]
+      ]
+    ]);
+    const reversed = new Map<number, readonly CommandEnvelope[]>([
+      [
+        0,
+        [
+          queueUnitCommand(0, "y", 1),
+          queueUnitCommand(0, "x", 1)
+        ]
+      ]
+    ]);
+
+    expect(runTicks("seed-1", ordered)).toBe(runTicks("seed-1", reversed));
+  });
+
   it("produces a different hash for a different command stream", () => {
     const baseline = new Map<number, readonly CommandEnvelope[]>([
       [4, [queueUnitCommand(4, "p1", 2)]],

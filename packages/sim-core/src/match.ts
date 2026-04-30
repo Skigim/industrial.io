@@ -5,6 +5,32 @@ import { runMovement } from "./systems/movement.js";
 import { runProduction } from "./systems/production.js";
 import type { MatchInput, MatchState, SimCommand } from "./types.js";
 
+function stableStringify(value: unknown): string {
+  if (value === undefined) {
+    return "null";
+  }
+
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(",")}]`;
+  }
+
+  const entries = Object.entries(value)
+    .filter(([, entryValue]) => entryValue !== undefined)
+    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+
+  return `{${entries
+    .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
+    .join(",")}}`;
+}
+
+function compareCommands(left: SimCommand, right: SimCommand): number {
+  return stableStringify(left).localeCompare(stableStringify(right));
+}
+
 export function createMatch(input: MatchInput): MatchState {
   const state: MatchState = {
     tick: 0,
@@ -23,10 +49,12 @@ export function stepMatch(
 ): void {
   state.tick = tick;
 
-  runMovement(state, commands);
+  const orderedCommands = [...commands].sort(compareCommands);
+
+  runMovement(state, orderedCommands);
   runProduction(state);
 }
 
 export function hashState(state: MatchState): number {
-  return fnv1a32(JSON.stringify(state));
+  return fnv1a32(stableStringify(state));
 }
