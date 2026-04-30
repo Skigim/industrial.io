@@ -1,6 +1,43 @@
-import type { CommandEnvelope } from "@industrial/net-protocol";
+import { fnv1a32, type CommandEnvelope } from "@industrial/net-protocol";
 import { describe, expect, it } from "vitest";
 import { createMatch, hashState, stepMatch } from "../src";
+
+function compareByCodeUnit(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
+}
+
+function stableStringifyByCodeUnit(value: unknown): string {
+  if (value === undefined) {
+    return "null";
+  }
+
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringifyByCodeUnit(entry)).join(",")}]`;
+  }
+
+  const entries = Object.entries(value)
+    .filter(([, entryValue]) => entryValue !== undefined)
+    .sort(([leftKey], [rightKey]) => compareByCodeUnit(leftKey, rightKey));
+
+  return `{${entries
+    .map(
+      ([key, entryValue]) =>
+        `${JSON.stringify(key)}:${stableStringifyByCodeUnit(entryValue)}`
+    )
+    .join(",")}}`;
+}
 
 function queueUnitCommand(
   tick: number,
@@ -98,6 +135,21 @@ describe("sim-core determinism", () => {
     ]);
 
     expect(runTicks("seed-1", ordered)).toBe(runTicks("seed-1", reversed));
+  });
+
+  it("canonicalizes unicode-bearing ids with locale-independent ordering", () => {
+    const ordered = createMatch({ seed: "seed-1" });
+    const reversed = createMatch({ seed: "seed-1" });
+    const orderedCommands = [queueUnitCommand(0, "z", 1), queueUnitCommand(0, "ä", 1)];
+    const reversedCommands = [queueUnitCommand(0, "ä", 1), queueUnitCommand(0, "z", 1)];
+
+    stepMatch(ordered, 0, orderedCommands);
+    stepMatch(reversed, 0, reversedCommands);
+
+    const expectedHash = fnv1a32(stableStringifyByCodeUnit(ordered));
+
+    expect(hashState(ordered)).toBe(expectedHash);
+    expect(hashState(reversed)).toBe(expectedHash);
   });
 
   it("produces a different hash for a different command stream", () => {

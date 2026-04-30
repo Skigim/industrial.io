@@ -5,6 +5,18 @@ import { runMovement } from "./systems/movement.js";
 import { runProduction } from "./systems/production.js";
 import type { MatchInput, MatchState, SimCommand } from "./types.js";
 
+function compareByCodeUnit(left: string, right: string): number {
+  if (left < right) {
+    return -1;
+  }
+
+  if (left > right) {
+    return 1;
+  }
+
+  return 0;
+}
+
 function stableStringify(value: unknown): string {
   if (value === undefined) {
     return "null";
@@ -20,7 +32,7 @@ function stableStringify(value: unknown): string {
 
   const entries = Object.entries(value)
     .filter(([, entryValue]) => entryValue !== undefined)
-    .sort(([leftKey], [rightKey]) => leftKey.localeCompare(rightKey));
+    .sort(([leftKey], [rightKey]) => compareByCodeUnit(leftKey, rightKey));
 
   return `{${entries
     .map(([key, entryValue]) => `${JSON.stringify(key)}:${stableStringify(entryValue)}`)
@@ -28,7 +40,7 @@ function stableStringify(value: unknown): string {
 }
 
 function compareCommands(left: SimCommand, right: SimCommand): number {
-  return stableStringify(left).localeCompare(stableStringify(right));
+  return compareByCodeUnit(stableStringify(left), stableStringify(right));
 }
 
 export function createMatch(input: MatchInput): MatchState {
