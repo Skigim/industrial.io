@@ -2,16 +2,15 @@ import seedrandom from "seedrandom";
 
 import type { MatchState } from "./types.js";
 
-const randomStateSymbol = Symbol("sim-core.random-state");
-
-type MatchStateWithRandom = MatchState & {
-  [randomStateSymbol]: seedrandom.PRNG;
-};
-
-export function attachRandomState(state: MatchState, seed: string): void {
-  (state as MatchStateWithRandom)[randomStateSymbol] = seedrandom(seed);
+export function createRandomState(seed: string): seedrandom.State.Arc4 {
+  return seedrandom(seed, { state: true }).state();
 }
 
 export function nextRandom(state: MatchState): number {
-  return (state as MatchStateWithRandom)[randomStateSymbol]();
+  const random = seedrandom("", { state: state.rngState });
+  const value = random();
+
+  state.rngState = random.state();
+
+  return value;
 }
