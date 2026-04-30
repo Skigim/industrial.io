@@ -15,6 +15,38 @@ describe("net-protocol", () => {
     expect(fnv1a32("hello")).toBe(0x4f9f2cab);
   });
 
+  it("rejects unsafe integers in command fields", () => {
+    expect(() =>
+      CommandEnvelopeSchema.parse({
+        matchId: "m-unsafe-tick",
+        tick: Number.MAX_SAFE_INTEGER + 1,
+        senderId: "p-unsafe",
+        command: { kind: "set_rally", x: 5, y: 12 }
+      })
+    ).toThrow();
+
+    expect(() =>
+      CommandEnvelopeSchema.parse({
+        matchId: "m-unsafe-x",
+        tick: 1,
+        senderId: "p-unsafe",
+        command: {
+          kind: "join_match",
+          preferredSpawn: { x: Number.MAX_SAFE_INTEGER + 1, y: 9 }
+        }
+      })
+    ).toThrow();
+
+    expect(() =>
+      QueueUnitCommandSchema.parse({
+        kind: "queue_unit",
+        factoryId: "f-unsafe",
+        unitType: "scout",
+        quantity: Number.MAX_SAFE_INTEGER + 1
+      })
+    ).toThrow();
+  });
+
   it("rejects malformed command envelopes", () => {
     expect(() => JoinMatchCommandSchema.parse({ kind: "join" })).toThrow();
     expect(
