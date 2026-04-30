@@ -1,9 +1,17 @@
 import express from "express";
 import { createServer } from "node:http";
+import { pathToFileURL } from "node:url";
 import { nanoid } from "nanoid";
 import { Server } from "socket.io";
 
 type Room = { id: string; peers: string[] };
+type RoomStore = ReturnType<typeof createRoomStore>;
+type SignalingServer = {
+  app: ReturnType<typeof express>;
+  io: Server;
+  server: ReturnType<typeof createServer>;
+  store: RoomStore;
+};
 
 export function createRoomStore() {
   const rooms = new Map<string, Room>();
@@ -19,7 +27,7 @@ export function createRoomStore() {
     joinRoom(roomId: string, peerId: string) {
       const room = rooms.get(roomId);
 
-      if (!room || room.peers.length >= 2) {
+      if (!room || room.peers.includes(peerId) || room.peers.length >= 2) {
         return false;
       }
 
@@ -30,7 +38,7 @@ export function createRoomStore() {
   };
 }
 
-if (process.env.NODE_ENV !== "test") {
+export function startSignalingServer(port = 8787): SignalingServer {
   const app = express();
   const server = createServer(app);
   const io = new Server(server, { cors: { origin: "*" } });
@@ -46,5 +54,11 @@ if (process.env.NODE_ENV !== "test") {
     });
   });
 
-  server.listen(8787);
+  server.listen(port);
+
+  return { app, io, server, store };
+}
+
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  startSignalingServer();
 }
