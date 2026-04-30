@@ -1,5 +1,5 @@
 import { Packr, Unpackr } from "msgpackr";
-import { CommandEnvelope, CommandEnvelopeSchema } from "./commands";
+import { CommandEnvelope, CommandEnvelopeSchema } from "./commands.js";
 
 const packr = new Packr();
 const unpackr = new Unpackr();
