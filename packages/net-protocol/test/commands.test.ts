@@ -82,6 +82,35 @@ describe("net-protocol", () => {
     ).toThrow();
   });
 
+  it("rejects empty and whitespace-only IDs", () => {
+    expect(() =>
+      CommandEnvelopeSchema.parse({
+        matchId: "",
+        tick: 3,
+        senderId: "player-1",
+        command: { kind: "set_rally", x: 5, y: 12 }
+      })
+    ).toThrow();
+
+    expect(() =>
+      CommandEnvelopeSchema.parse({
+        matchId: "match-1",
+        tick: 3,
+        senderId: "   ",
+        command: { kind: "set_rally", x: 5, y: 12 }
+      })
+    ).toThrow();
+
+    expect(() =>
+      QueueUnitCommandSchema.parse({
+        kind: "queue_unit",
+        factoryId: "\t",
+        unitType: "scout",
+        quantity: 1
+      })
+    ).toThrow();
+  });
+
   it.each<CommandEnvelope>([
     {
       matchId: "m1",
