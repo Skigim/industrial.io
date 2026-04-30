@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createRoomStore, type Room } from "../src/roomStore.js";
-import { registerRoomSocketHandlers } from "../src/server.js";
-import type { RoomStore } from "../src/roomStore.js";
+import { createRoomStore, type Room, type RoomStore } from "../src/roomStore.js";
+import { registerRoomSocketHandlers, startSignalingServer } from "../src/server.js";
 
 function createFakeSocket(id: string) {
   const handlers = new Map<string, (...args: unknown[]) => void>();
@@ -26,6 +25,34 @@ function createFakeSocket(id: string) {
 }
 
 describe("signaling server", () => {
+  it("resolves startup after the HTTP server is listening", async () => {
+    const startup = startSignalingServer(0);
+
+    expect(startup).toBeInstanceOf(Promise);
+
+    const signaling = await startup;
+
+    try {
+      const address = signaling.server.address();
+
+      expect(signaling.server.listening).toBe(true);
+      expect(address).not.toBeNull();
+      expect(typeof address).toBe("object");
+      expect(address && "port" in address ? address.port : 0).toBeGreaterThan(0);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        signaling.server.close((error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+
+          resolve();
+        });
+      });
+    }
+  });
+
   it("emits room:created with the newly created room", () => {
     const room: Room = { id: "room-1", peers: ["peer-1"] };
     const store: RoomStore = {

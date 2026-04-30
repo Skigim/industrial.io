@@ -2,6 +2,17 @@ import { describe, expect, it } from "vitest";
 import { createRoomStore } from "../src/roomStore.js";
 
 describe("room store", () => {
+  it("returns a frozen room snapshot instead of mutable store state", () => {
+    const store = createRoomStore();
+    const room = store.createRoom("owner");
+
+    expect(Object.isFrozen(room)).toBe(true);
+    expect(Object.isFrozen(room.peers)).toBe(true);
+    expect(() => (room.peers as string[]).push("guest")).toThrow(TypeError);
+    expect(store.joinRoom(room.id, "guest")).toBe(true);
+    expect(room.peers).toEqual(["owner"]);
+  });
+
   it("creates and joins up to two peers", () => {
     const store = createRoomStore();
     const room = store.createRoom("owner");

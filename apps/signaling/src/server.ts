@@ -29,7 +29,7 @@ export function registerRoomSocketHandlers(socket: SignalingSocket, store: RoomS
   });
 }
 
-export function startSignalingServer(port = 8787): SignalingServer {
+export async function startSignalingServer(port = 8787): Promise<SignalingServer> {
   const app = express();
   const server = createServer(app);
   const io = new Server(server, { cors: { origin: "*" } });
@@ -39,11 +39,24 @@ export function startSignalingServer(port = 8787): SignalingServer {
     registerRoomSocketHandlers(socket, store);
   });
 
-  server.listen(port);
+  await new Promise<void>((resolve, reject) => {
+    const onError = (error: Error) => {
+      reject(error);
+    };
+
+    server.once("error", onError);
+    server.listen(port, () => {
+      server.off("error", onError);
+      resolve();
+    });
+  });
 
   return { app, io, server, store };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  startSignalingServer();
+  void startSignalingServer().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
 }

@@ -1,6 +1,8 @@
 import { nanoid } from "nanoid";
 
-export type Room = { id: string; peers: string[] };
+export type Room = Readonly<{ id: string; peers: readonly string[] }>;
+
+type StoredRoom = { id: string; peers: string[] };
 
 export type RoomStore = {
   createRoom(ownerId: string): Room;
@@ -8,16 +10,20 @@ export type RoomStore = {
   removePeer(peerId: string): boolean;
 };
 
+function toRoomSnapshot(room: StoredRoom): Room {
+  return Object.freeze({ id: room.id, peers: Object.freeze([...room.peers]) });
+}
+
 export function createRoomStore(): RoomStore {
-  const rooms = new Map<string, Room>();
+  const rooms = new Map<string, StoredRoom>();
 
   return {
     createRoom(ownerId: string) {
-      const room = { id: nanoid(8), peers: [ownerId] };
+      const room: StoredRoom = { id: nanoid(8), peers: [ownerId] };
 
       rooms.set(room.id, room);
 
-      return room;
+      return toRoomSnapshot(room);
     },
     joinRoom(roomId: string, peerId: string) {
       const room = rooms.get(roomId);
