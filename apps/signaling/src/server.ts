@@ -1,11 +1,9 @@
 import express from "express";
 import { createServer } from "node:http";
 import { pathToFileURL } from "node:url";
-import { nanoid } from "nanoid";
-import { Server } from "socket.io";
+import { Server, type Socket } from "socket.io";
+import { createRoomStore, type RoomStore } from "./roomStore.js";
 
-type Room = { id: string; peers: string[] };
-type RoomStore = ReturnType<typeof createRoomStore>;
 type SignalingServer = {
   app: ReturnType<typeof express>;
   io: Server;
@@ -13,29 +11,22 @@ type SignalingServer = {
   store: RoomStore;
 };
 
-export function createRoomStore() {
-  const rooms = new Map<string, Room>();
+type SignalingSocket = Pick<Socket, "id" | "emit" | "on">;
 
-  return {
-    createRoom(ownerId: string) {
-      const room = { id: nanoid(8), peers: [ownerId] };
+export { createRoomStore } from "./roomStore.js";
 
-      rooms.set(room.id, room);
+export function registerRoomSocketHandlers(socket: SignalingSocket, store: RoomStore) {
+  socket.on("room:create", () => {
+    socket.emit("room:created", store.createRoom(socket.id));
+  });
 
-      return room;
-    },
-    joinRoom(roomId: string, peerId: string) {
-      const room = rooms.get(roomId);
+  socket.on("room:join", (roomId: string) => {
+    socket.emit("room:join-result", { ok: store.joinRoom(roomId, socket.id) });
+  });
 
-      if (!room || room.peers.includes(peerId) || room.peers.length >= 2) {
-        return false;
-      }
-
-      room.peers.push(peerId);
-
-      return true;
-    }
-  };
+  socket.on("disconnect", () => {
+    store.removePeer(socket.id);
+  });
 }
 
 export function startSignalingServer(port = 8787): SignalingServer {
@@ -45,13 +36,7 @@ export function startSignalingServer(port = 8787): SignalingServer {
   const store = createRoomStore();
 
   io.on("connection", (socket) => {
-    socket.on("room:create", () => {
-      socket.emit("room:created", store.createRoom(socket.id));
-    });
-
-    socket.on("room:join", (roomId: string) => {
-      socket.emit("room:join-result", { ok: store.joinRoom(roomId, socket.id) });
-    });
+    registerRoomSocketHandlers(socket, store);
   });
 
   server.listen(port);
