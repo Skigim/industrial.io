@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "packageManager": "pnpm@10.12.4",
   "scripts": {
-    "dev": "concurrently -n client,signal -c cyan,yellow \"pnpm --filter @industrial/client dev\" \"pnpm --filter @industrial/signaling dev\"",
-    "build": "pnpm -r build",
+    "dev": "concurrently -n client,signal -c cyan,yellow \"pnpm --filter @industrial/client --fail-if-no-match dev\" \"pnpm --filter @industrial/signaling --fail-if-no-match dev\"",
+    "build": "pnpm -r --fail-if-no-match build",
     "test": "vitest run --passWithNoTests",
     "lint": "eslint .eslintrc.cjs --max-warnings=0",
     "format": "prettier --write .",
