@@ -1,6 +1,7 @@
 import { Packr } from "msgpackr";
 import { describe, expect, it } from "vitest";
 import {
+  CommandEnvelopeSchema,
   decodeEnvelope,
   encodeEnvelope,
   fnv1a32,
@@ -24,6 +25,28 @@ describe("net-protocol", () => {
           unitType: "scout",
           quantity: 0
         })
+    ).toThrow();
+
+    expect(() =>
+      CommandEnvelopeSchema.parse({
+        matchId: "m-extra",
+        tick: 3,
+        senderId: "p-extra",
+        command: { kind: "set_rally", x: 5, y: 12, unexpected: true },
+        unexpected: true
+      })
+    ).toThrow();
+
+    expect(() =>
+      CommandEnvelopeSchema.parse({
+        matchId: "m-spawn",
+        tick: 4,
+        senderId: "p-spawn",
+        command: {
+          kind: "join_match",
+          preferredSpawn: { x: 3, y: 9, unexpected: true }
+        }
+      })
     ).toThrow();
   });
 

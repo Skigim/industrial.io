@@ -13,7 +13,8 @@
   },
   "scripts": {
     "build": "rimraf dist && tsc -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run && pnpm run test:package",
+    "test:package": "pnpm run build && node ./test/package-smoke.mjs",
     "lint": "eslint src test --ext .ts"
   },
   "dependencies": {
