@@ -1,0 +1,11 @@
+{
+  "name": "@industrial/content",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "vitest run src/content.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
