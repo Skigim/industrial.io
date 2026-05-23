@@ -1,78 +1,54 @@
-# obratemplate
+# Industrial.io
 
-A quick-start template for using [Superpowers](https://github.com/obra/superpowers) with **GitHub Copilot** (VSCode / GitHub Copilot coding agent).
+Industrial.io is a factory-building online MMO centered on shared-world industry, power management, and logistics pressure. The first planned playable slice focuses on building and scaling factories in a persistent world before layering in player markets, hauling contracts, territory control, and PvP pressure.
 
-Superpowers is a software development methodology for AI coding agents, built on composable skills. This template vendors the full `skills/` library and wires it up for GitHub Copilot via `.github/copilot-instructions.md`.
+## Current Status
 
-## What's Included
+This repository is in pre-implementation planning.
 
-- **`skills/`** — All Superpowers skills, vendored from [obra/superpowers](https://github.com/obra/superpowers)
-- **`.github/copilot-instructions.md`** — Persistent instructions that activate the skills system for GitHub Copilot
+- The core factory MMO design is approved.
+- The first implementation plan is approved.
+- Product code has not been scaffolded yet.
 
-## How to Use This Template
+The current goal is to build a factory-first MVP where players can place a site anchor, extract resources, route items through transport networks, power a compact production chain, and persist region state through an authoritative world service.
 
-### Option 1: Use as a GitHub Template Repository
+## MVP Direction
 
-Click **"Use this template"** at the top of this page to create a new repository with these files pre-installed.
+The approved MVP is designed around these principles:
 
-### Option 2: Copy into an Existing Project
+- shared-world factory building before full market or territory systems
+- throughput and power as the main early optimization problems
+- logistics that matter physically, including bounded cross-region hand-off buffers
+- authoritative simulation with low-cost hosting assumptions
+- player trade and territory control as later layers, not day-one scope
 
-```bash
-# Copy the skills directory and copilot instructions into your project
-cp -r skills/ /path/to/your/project/
-cp -r .github/ /path/to/your/project/
-```
+## Planned Architecture
 
-Then commit both directories.
+The current implementation plan targets a pnpm monorepo with these major pieces:
 
-## How It Works
+- React plus Vite for the browser UI shell
+- non-React TypeScript runtime code for rendering and real-time client logic
+- a dedicated world simulation service
+- a separate API service
+- shared packages for contracts, content, transport, simulation, and persistence
+- PostgreSQL for durable world state
 
-Once the files are in your repository, **GitHub Copilot will automatically read `.github/copilot-instructions.md`** on every request in VS Code and the GitHub Copilot coding agent. This file tells Copilot:
+## Key Documents
 
-- Where to find the vendored skills (`skills/` directory)
-- When to invoke each skill
-- How to map Copilot tool names to skill tool references
-- The core process rules (TDD, systematic debugging, verification before completion, etc.)
+- [Core Factory MMO Design](docs/superpowers/specs/2026-05-23-core-factory-mmo-design.md)
+- [Core Factory MMO Implementation Plan](docs/superpowers/plans/2026-05-23-core-factory-mmo-implementation-plan.md)
 
-### The Basic Workflow
+## Repository Layout
 
-1. **brainstorming** — Before writing code, explore requirements, propose approaches, get approval
-2. **writing-plans** — Break approved design into bite-sized TDD tasks with exact file paths and code
-3. **subagent-driven-development** or **executing-plans** — Execute the plan task by task with review checkpoints
-4. **test-driven-development** — RED→GREEN→REFACTOR on every task
-5. **systematic-debugging** — Root cause investigation before any fix
-6. **verification-before-completion** — Run commands, see output, THEN claim success
-7. **requesting-code-review** — Review after each task or before merging
-8. **finishing-a-development-branch** — Merge, PR, or discard with structured options
+- `docs/superpowers/specs/` contains approved design specifications.
+- `docs/superpowers/plans/` contains implementation plans derived from approved specs.
+- `skills/` contains the vendored Superpowers workflow skill set used in this repository.
+- `.github/copilot-instructions.md` wires those workflow rules into GitHub Copilot for this project.
 
-### Skills Available
+## Workflow Notes
 
-| Skill | Purpose |
-|-------|---------|
-| `using-superpowers` | Introduction — read first |
-| `brainstorming` | Design before implementation |
-| `writing-plans` | Detailed implementation plans |
-| `executing-plans` | Batch plan execution with checkpoints |
-| `subagent-driven-development` | Fresh subagent per task with two-stage review |
-| `test-driven-development` | RED-GREEN-REFACTOR cycle |
-| `systematic-debugging` | 4-phase root cause process |
-| `verification-before-completion` | Evidence before success claims |
-| `requesting-code-review` | Pre-review checklist |
-| `receiving-code-review` | Responding to feedback |
-| `using-git-worktrees` | Isolated development branches |
-| `finishing-a-development-branch` | Merge/PR decision workflow |
-| `dispatching-parallel-agents` | Concurrent subagent workflows |
-| `writing-skills` | Create new skills |
+This repository uses the Superpowers workflow for design, planning, implementation, verification, and review. The vendored skills remain part of the repo on purpose because they define the development process used to shape the project.
 
-## Keeping Skills Up to Date
+## Next Step
 
-To update the vendored skills to the latest version from [obra/superpowers](https://github.com/obra/superpowers):
-
-```bash
-curl -sL https://codeload.github.com/obra/superpowers/tar.gz/refs/heads/main | \
-  tar -xz --strip-components=1 superpowers-main/skills
-```
-
-## Credits
-
-Skills are from [obra/superpowers](https://github.com/obra/superpowers) by [Jesse Vincent](https://blog.fsck.com) / [Prime Radiant](https://primeradiant.com), licensed under MIT.
+Begin implementation from the approved plan in `docs/superpowers/plans/2026-05-23-core-factory-mmo-implementation-plan.md`.
