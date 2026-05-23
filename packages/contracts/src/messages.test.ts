@@ -58,4 +58,48 @@ describe('contracts', () => {
     expect(buildingTypeSchema.parse('site-anchor')).toBe('site-anchor');
     expect(buildingTypeSchema.parse('storage')).toBe('storage');
   });
+
+  it('rejects oversized region and player identifiers', () => {
+    const oversizedIdentifier = 'x'.repeat(129);
+
+    expect(() =>
+      clientMessageSchema.parse({
+        type: 'region.join',
+        regionId: oversizedIdentifier,
+        playerId: 'player-1',
+      }),
+    ).toThrow();
+
+    expect(() =>
+      clientMessageSchema.parse({
+        type: 'build.place',
+        regionId: 'starter-1',
+        playerId: oversizedIdentifier,
+        buildingType: 'belt',
+        tile: { x: 0, y: 0 },
+      }),
+    ).toThrow();
+  });
+
+  it('rejects tile coordinates outside the supported range', () => {
+    expect(() =>
+      clientMessageSchema.parse({
+        type: 'build.place',
+        regionId: 'starter-1',
+        playerId: 'player-1',
+        buildingType: 'belt',
+        tile: { x: -1, y: 0 },
+      }),
+    ).toThrow();
+
+    expect(() =>
+      clientMessageSchema.parse({
+        type: 'build.place',
+        regionId: 'starter-1',
+        playerId: 'player-1',
+        buildingType: 'belt',
+        tile: { x: 0, y: 1024 },
+      }),
+    ).toThrow();
+  });
 });
