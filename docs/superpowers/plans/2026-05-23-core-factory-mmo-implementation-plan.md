@@ -119,7 +119,8 @@ packages:
 ```ts
 // packages/contracts/src/messages.test.ts
 import { describe, expect, it } from 'vitest';
-import { clientMessageSchema, guestSessionResponseSchema } from './messages';
+import { guestSessionResponseSchema } from './http';
+import { clientMessageSchema } from './messages';
 
 describe('contracts', () => {
   it('parses a region join message', () => {
@@ -146,7 +147,7 @@ describe('contracts', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/contracts test`
+Run: `pnpm vitest run packages/contracts/src/messages.test.ts`
 
 Expected: FAIL with `Cannot find module './messages'` or missing export errors.
 
@@ -190,17 +191,17 @@ export const clientMessageSchema = z.discriminatedUnion('type', [
     tile: z.object({ x: z.number().int(), y: z.number().int() }),
   }),
 ]);
+```
+
+```ts
+// packages/contracts/src/http.ts
+import { z } from 'zod';
 
 export const guestSessionResponseSchema = z.object({
   playerId: z.string().min(1),
   sessionToken: z.string().min(1),
   regionId: z.string().min(1),
 });
-```
-
-```ts
-// packages/contracts/src/http.ts
-import { z } from 'zod';
 
 export const regionSummarySchema = z.object({
   regionId: z.string().min(1),
@@ -257,7 +258,7 @@ describe('starter content', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/content test`
+Run: `pnpm vitest run packages/content/src/content.test.ts`
 
 Expected: FAIL with missing module or export errors.
 
@@ -359,7 +360,7 @@ describe('transport runtime', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/transport test`
+Run: `pnpm vitest run packages/transport/src/transport.test.ts`
 
 Expected: FAIL with missing exports.
 
@@ -428,8 +429,32 @@ export class WakeQueue {
 ```
 
 ```ts
+// packages/transport/src/TransportArray.ts
+import { SegmentedBuffer } from './SegmentedBuffer';
+
+export class TransportArray<T> {
+  readonly id: string;
+  readonly items: SegmentedBuffer<T>;
+
+  constructor(id: string, segmentSize = 32) {
+    this.id = id;
+    this.items = new SegmentedBuffer<T>(segmentSize);
+  }
+
+  enqueue(item: T): void {
+    this.items.push(item);
+  }
+
+  dequeue(): T | undefined {
+    return this.items.shift();
+  }
+}
+```
+
+```ts
 // packages/transport/src/index.ts
 export * from './SegmentedBuffer';
+export * from './TransportArray';
 export * from './WakeQueue';
 ```
 
@@ -485,7 +510,7 @@ describe('region simulation', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/sim-core test`
+Run: `pnpm vitest run packages/sim-core/src/sim.test.ts`
 
 Expected: FAIL with missing exports.
 
@@ -612,7 +637,7 @@ describe('region repository', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/persistence test`
+Run: `pnpm vitest run packages/persistence/src/repository.test.ts`
 
 Expected: FAIL with missing repository or database setup errors.
 
@@ -777,7 +802,7 @@ describe('world service', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/world test`
+Run: `pnpm vitest run services/world/src/server.test.ts`
 
 Expected: FAIL with missing server exports.
 
@@ -786,15 +811,15 @@ Expected: FAIL with missing server exports.
 ```ts
 // services/world/src/region/RegionRuntimeHost.ts
 import { WakeQueue } from '@industrial/transport';
-import { stepRegion } from '@industrial/sim-core';
+import { stepRegion, type RegionState } from '@industrial/sim-core';
 
 export class RegionRuntimeHost {
   private wakeQueue = new WakeQueue();
 
-  tick(region: unknown, deltaMs: number): unknown {
+  tick(region: RegionState, deltaMs: number): RegionState {
     const wakeBudget = 50;
     this.wakeQueue.drain(wakeBudget);
-    return stepRegion(region as never, deltaMs);
+    return stepRegion(region, deltaMs);
   }
 }
 ```
@@ -863,7 +888,7 @@ describe('api server', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/api test`
+Run: `pnpm vitest run services/api/src/server.test.ts`
 
 Expected: FAIL with missing route handlers.
 
@@ -872,11 +897,12 @@ Expected: FAIL with missing route handlers.
 ```ts
 // services/api/src/routes/session.ts
 import type { FastifyInstance } from 'fastify';
+import { randomUUID } from 'node:crypto';
 
 export const registerSessionRoutes = async (app: FastifyInstance): Promise<void> => {
   app.post('/api/session/guest', async () => ({
-    playerId: crypto.randomUUID(),
-    sessionToken: crypto.randomUUID(),
+    playerId: randomUUID(),
+    sessionToken: randomUUID(),
     regionId: 'starter-1',
   }));
 };
@@ -956,7 +982,7 @@ describe('App', () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-Run: `pnpm --filter @industrial/client test`
+Run: `pnpm vitest run apps/client/src/App.test.tsx`
 
 Expected: FAIL with missing components.
 

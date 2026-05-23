@@ -79,6 +79,10 @@ Transport simulation should be implemented around unified memory arrays for acti
 
 Continuous transport arrays should not straddle region boundaries. If a belt line, pipe line, or similar network crosses from one simulation region into another, the crossing must terminate at an explicit hand-off buffer or gate inventory on the border. Region A deposits into that boundary object and Region B pulls from it as a separate transport array. This keeps rollback, recovery, and persistence concerns isolated to a transactional inventory point instead of creating a single logical array that can desynchronize across regions.
 
+Boundary hand-off buffers are bounded inventories, not infinite mailboxes. For the MVP, each boundary object should have a documented default capacity, for example 256 item units, and a configurable hard maximum, for example 4096 item units. The default overflow behavior should be producer backpressure: if the buffer is full, the producing side stalls further deposits until capacity is available. Lossy drop policies or explicit overflow rejection can exist as later configurable modes, but the baseline contract for this slice is no silent item loss.
+
+Rollback and desync recovery should preserve one invariant: committed cross-region transfers are never lost or duplicated. Boundary buffers should therefore persist a simple monotonically increasing hand-off sequence with their committed contents, and any replay or re-pull after one-sided rollback must be idempotent against that committed history until both sides converge on the same checkpoint.
+
 Performance risk in this model shifts away from raw per-item iteration and toward topology changes and wake-up cascades. Sleeping arrays should remain cheap, but large factory restarts must not cause unbounded same-tick activation spikes. The runtime should therefore support lightweight wake-up throttling or staged reactivation of neighboring arrays, and transport memory layouts should avoid frequent whole-array reallocation during player edits by using stable segmented buffers or other deque-like storage patterns where appropriate.
 
 Factory edits should not require full memory copies of active transport arrays. Transport storage should use segmented buffers composed of linked, fixed-size memory blocks so belts, pipes, and similar lines can grow, shrink, split, or merge with minimal copying and without frequent array reallocation.
@@ -181,6 +185,12 @@ Dormant regions should not require frame-by-frame replay on reload. For self-con
 
 Catch-up logic should support piecewise linear evaluation when a factory's operating conditions change during the offline window. For example, if a generator or machine fuel buffer will exhaust at time $t_{exhaustion}$ and $t_{exhaustion} < \Delta t$, the server should resolve the network at the current full-rate regime up to $t_{exhaustion}$, recompute the resulting constrained throughput or stall state, and then apply the remaining time under the degraded regime. The same general approach should apply to other predictable threshold crossings such as buffer fill, input starvation, or power collapse.
 
+Closed-form or piecewise catch-up should only be applied within a bounded offline window. The MVP should define a configurable maximum offline duration, for example 24 hours during development testing, beyond which the loader falls back to chunked replay or an operator-reviewed recovery path rather than unbounded extrapolation.
+
+Elapsed time for catch-up should come from monotonic runtime measurements rather than naive wall-clock assumptions. Negative deltas should be clamped to zero, large discontinuities should be capped to the configured offline window, and those discontinuities should be logged for review.
+
+Snapshots must also carry simulation/content version metadata for recipe rates, power rules, and transport behavior. If a dormant region loads under a mismatched version, the runtime should either apply a deterministic migration or fall back to replay from the stored snapshot; if neither path is available, the region should remain unloaded rather than applying ambiguous catch-up.
+
 This is most reliable when transport state is represented in explicit arrays and all cross-region exchange is isolated through hand-off buffers. Under those conditions, the server can often compute offline progress in closed-form or batched passes instead of replaying every tick. The design should not assume arbitrary live cross-region dependencies can always be resolved this way; deterministic catch-up is a goal for isolated regions and explicit boundary inventories, not a blanket promise for every future system.
 
 ## Service Architecture
@@ -252,6 +262,7 @@ Deterministic tests should cover:
 - machine state transitions
 - bottleneck and starvation edge cases
 - piecewise offline catch-up across fuel exhaustion, buffer fill, and power-loss thresholds
+- parity checks between bounded piecewise catch-up and tick-by-tick replay for representative factory scenarios
 
 ### Persistence And Region Tests
 
@@ -260,7 +271,7 @@ Integration tests should verify:
 - region load and unload behavior
 - snapshot save and restore
 - inventory and machine recovery after restart
-- boundary hand-off buffer reconciliation after one-sided region rollback or reload
+- boundary hand-off buffer reconciliation after one-sided region rollback or reload, with no lost or duplicated committed items and configured backpressure behavior preserved
 - correct ownership and placement persistence
 
 ### Multiplayer Soak Tests
