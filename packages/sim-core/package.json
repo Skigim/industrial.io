@@ -1,0 +1,15 @@
+{
+  "name": "@industrial/sim-core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run src/sim.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  }
+}
