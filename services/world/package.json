@@ -1,0 +1,22 @@
+{
+  "name": "@industrial/world",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/server.ts",
+  "exports": {
+    ".": "./src/server.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run src/server.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@fastify/websocket": "^11.2.0",
+    "@industrial/content": "workspace:*",
+    "@industrial/sim-core": "workspace:*",
+    "@industrial/transport": "workspace:*",
+    "fastify": "^5.3.3"
+  }
+}
