@@ -1,0 +1,22 @@
+{
+  "name": "@industrial/persistence",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "src/RegionRepository.ts",
+  "exports": {
+    ".": "./src/RegionRepository.ts",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "vitest run src/repository.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.44.2",
+    "postgres": "^3.4.7"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.7"
+  }
+}
