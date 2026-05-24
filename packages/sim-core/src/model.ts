@@ -1,8 +1,12 @@
 import { starterPower, starterStorage } from './buildings';
 
+export const resourceTypes = ['coal', 'iron-ore', 'iron-plate'] as const;
+
+export type ResourceType = (typeof resourceTypes)[number];
+
 export type RegionState = {
   id: string;
-  storage: Record<string, number>;
+  storage: Record<ResourceType, number>;
   power: { availableKw: number; demandKw: number };
   fuelUnits: number;
   meta: { lastCatchUpMode: 'live' | 'piecewise' };
