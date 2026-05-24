@@ -1,7 +1,9 @@
 import { sql } from 'drizzle-orm';
-import { describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { db } from './db';
 import { RegionRepository } from './RegionRepository';
+
+const createdSchemaNames: string[] = [];
 
 const createTestSchemaName = (): string =>
   `test_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -26,17 +28,31 @@ const ensureSchema = async (): Promise<void> => {
   `);
 };
 
-const useTestSchema = async (): Promise<void> => {
+const useTestSchema = async (): Promise<string> => {
   const schemaName = createTestSchemaName();
-  await db.execute(sql.raw(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`));
-  await db.execute(sql.raw(`SET search_path TO "${schemaName}"`));
+  await db.execute(sql`CREATE SCHEMA IF NOT EXISTS ${sql.identifier(schemaName)}`);
+  await db.execute(sql`SET search_path TO ${sql.identifier(schemaName)}`);
+  return schemaName;
 };
 
 const createTestRepository = async (): Promise<RegionRepository> => {
-  await useTestSchema();
+  const schemaName = await useTestSchema();
+  createdSchemaNames.push(schemaName);
   await ensureSchema();
   return new RegionRepository();
 };
+
+afterAll(async () => {
+  while (createdSchemaNames.length > 0) {
+    const schemaName = createdSchemaNames.pop();
+
+    if (!schemaName) {
+      continue;
+    }
+
+    await db.execute(sql.raw(`DROP SCHEMA IF EXISTS "${schemaName}" CASCADE`));
+  }
+});
 
 describe('region repository', () => {
   it('round-trips a region snapshot and boundary buffer', async () => {
