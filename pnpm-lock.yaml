@@ -43,6 +43,12 @@ importers:
 
   packages/transport: {}
 
+  services/api:
+    dependencies:
+      fastify:
+        specifier: ^5.3.3
+        version: 5.8.5
+
   services/world:
     dependencies:
       '@fastify/websocket':
