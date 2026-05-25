@@ -1,13 +1,8 @@
 import websocket from '@fastify/websocket';
 import Fastify from 'fastify';
 
-import { RegionManager } from './region/RegionManager';
+import { RegionManager, type JoinRegionRequest } from './region/RegionManager';
 import type { RegionSnapshot } from './region/bootstrapStarterRegion';
-
-type JoinRegionRequest = {
-  regionId: string;
-  playerId: string;
-};
 
 export type WorldServer = {
   app: ReturnType<typeof Fastify>;

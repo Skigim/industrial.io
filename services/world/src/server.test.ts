@@ -1,5 +1,7 @@
+import { buildingsById } from '@industrial/content';
 import { describe, expect, it } from 'vitest';
 import { createWorldServer } from './server';
+import { bootstrapStarterRegion } from './region/bootstrapStarterRegion';
 
 describe('world service', () => {
   it('reports healthy over HTTP', async () => {
@@ -30,5 +32,20 @@ describe('world service', () => {
     const secondSnapshot = await server.joinRegion({ regionId: 'starter-1', playerId: 'player-2' });
 
     expect(secondSnapshot.buildings).toEqual([{ id: 'site-anchor-1', type: 'site-anchor' }]);
+  });
+
+  it('fails clearly when the starter site-anchor definition is missing', () => {
+    const mutableBuildingsById = buildingsById as Record<string, unknown>;
+    const originalSiteAnchor = mutableBuildingsById['site-anchor'];
+
+    Reflect.deleteProperty(mutableBuildingsById, 'site-anchor');
+
+    try {
+      expect(() => bootstrapStarterRegion('starter-1')).toThrowError(
+        'Missing site-anchor building definition',
+      );
+    } finally {
+      mutableBuildingsById['site-anchor'] = originalSiteAnchor;
+    }
   });
 });

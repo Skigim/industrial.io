@@ -6,7 +6,7 @@ import {
 } from './bootstrapStarterRegion';
 import { RegionRuntimeHost } from './RegionRuntimeHost';
 
-type JoinRegionRequest = {
+export type JoinRegionRequest = {
   regionId: string;
   playerId: string;
 };

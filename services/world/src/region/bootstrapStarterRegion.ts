@@ -11,10 +11,19 @@ export type BootstrappedRegion = {
   snapshot: RegionSnapshot;
 };
 
-export const bootstrapStarterRegion = (regionId: string): BootstrappedRegion => ({
-  state: createStarterRegion({ id: regionId }),
-  snapshot: {
-    regionId,
-    buildings: [{ id: 'site-anchor-1', type: buildingsById['site-anchor'].id }],
-  },
-});
+export const bootstrapStarterRegion = (regionId: string): BootstrappedRegion => {
+  const state = createStarterRegion({ id: regionId });
+  const siteAnchor = buildingsById['site-anchor'];
+
+  if (!siteAnchor) {
+    throw new Error('Missing site-anchor building definition');
+  }
+
+  return {
+    state,
+    snapshot: {
+      regionId: state.id,
+      buildings: [{ id: 'site-anchor-1', type: siteAnchor.id }],
+    },
+  };
+};
