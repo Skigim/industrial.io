@@ -11,6 +11,26 @@ export type WorldServer = {
   joinRegion: (request: JoinRegionRequest) => Promise<RegionSnapshot>;
 };
 
+const readJoinRegionRequest = (query: unknown): JoinRegionRequest | null => {
+  if (!query || typeof query !== 'object') {
+    return null;
+  }
+
+  const candidate = query as {
+    regionId?: unknown;
+    playerId?: unknown;
+  };
+
+  if (typeof candidate.regionId !== 'string' || typeof candidate.playerId !== 'string') {
+    return null;
+  }
+
+  return {
+    regionId: candidate.regionId,
+    playerId: candidate.playerId,
+  };
+};
+
 export const createWorldServer = async (): Promise<WorldServer> => {
   const app = Fastify();
   const regionManager = new RegionManager();
@@ -20,15 +40,15 @@ export const createWorldServer = async (): Promise<WorldServer> => {
   app.get('/health', async () => ({ ok: true }));
 
   app.get('/ws', { websocket: true }, (socket, request) => {
-    const query = request.query as Partial<JoinRegionRequest>;
-    let joinedRegionId = typeof query.regionId === 'string' ? query.regionId : undefined;
+    const joinRequest = readJoinRegionRequest(request.query);
+    let joinedRegionId = joinRequest?.regionId;
 
     const sendSnapshot = (snapshot: RegionSnapshot) => {
       socket.send(JSON.stringify({ type: 'region.snapshot', ...snapshot }));
     };
 
-    if (joinedRegionId && typeof query.playerId === 'string') {
-      sendSnapshot(regionManager.joinRegion({ regionId: joinedRegionId, playerId: query.playerId }));
+    if (joinRequest) {
+      sendSnapshot(regionManager.joinRegion(joinRequest));
     }
 
     const interval = setInterval(() => {
@@ -40,7 +60,16 @@ export const createWorldServer = async (): Promise<WorldServer> => {
     }, 1000);
 
     socket.on('message', (rawMessage: Buffer) => {
-      const parsed = clientMessageSchema.safeParse(JSON.parse(String(rawMessage)));
+      let message: unknown;
+
+      try {
+        message = JSON.parse(String(rawMessage));
+      } catch (error) {
+        console.error('Failed to parse world client message.', error);
+        return;
+      }
+
+      const parsed = clientMessageSchema.safeParse(message);
 
       if (!parsed.success) {
         return;
@@ -52,7 +81,9 @@ export const createWorldServer = async (): Promise<WorldServer> => {
         return;
       }
 
-      sendSnapshot(regionManager.placeBuilding(parsed.data));
+      if (parsed.data.type === 'build.place') {
+        sendSnapshot(regionManager.placeBuilding(parsed.data));
+      }
     });
 
     socket.on('close', () => {

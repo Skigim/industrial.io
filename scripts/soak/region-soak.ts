@@ -8,10 +8,29 @@ const connectBot = (index: number): Promise<void> =>
   new Promise((resolve, reject) => {
     const playerId = `bot-${index}`;
     const socket = new WebSocket(`${worldUrl}?regionId=${targetRegionId}&playerId=${playerId}`);
+    let settled = false;
+
+    const rejectOnce = (error: Error) => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      reject(error);
+    };
+
+    const resolveOnce = () => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      resolve();
+    };
 
     const fail = (error: Error) => {
       socket.close();
-      reject(error);
+      rejectOnce(error);
     };
 
     const timer = setTimeout(() => {
@@ -23,15 +42,26 @@ const connectBot = (index: number): Promise<void> =>
     });
 
     socket.on('message', (message) => {
-      const payload = JSON.parse(String(message));
+      let payload: unknown;
 
-      if (payload.type !== 'region.snapshot') {
+      try {
+        payload = JSON.parse(String(message));
+      } catch (error) {
+        console.error(`Ignoring malformed snapshot for ${playerId}.`, error);
+        return;
+      }
+
+      if (
+        !payload
+        || typeof payload !== 'object'
+        || (payload as { type?: unknown }).type !== 'region.snapshot'
+      ) {
         return;
       }
 
       clearTimeout(timer);
       socket.close();
-      resolve();
+      resolveOnce();
     });
 
     socket.on('error', (error) => {
@@ -41,6 +71,10 @@ const connectBot = (index: number): Promise<void> =>
 
     socket.on('close', () => {
       clearTimeout(timer);
+
+      if (!settled) {
+        rejectOnce(new Error(`${playerId} socket closed before a region snapshot arrived`));
+      }
     });
   });
 

@@ -39,6 +39,23 @@ type RegionSnapshotMessage = {
   };
 };
 
+const isRegionSnapshotMessage = (value: unknown): value is RegionSnapshotMessage => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as {
+    type?: unknown;
+    storage?: unknown;
+  };
+
+  if (candidate.type !== 'region.snapshot' || !candidate.storage || typeof candidate.storage !== 'object') {
+    return false;
+  }
+
+  return typeof (candidate.storage as Record<string, unknown>)['iron-plate'] === 'number';
+};
+
 export const App = () => {
   const [session, setSession] = useState<GuestSession | null>(null);
   const [ironPlateCount, setIronPlateCount] = useState(0);
@@ -71,18 +88,37 @@ export const App = () => {
         socket.addEventListener('open', () => {
           worldConnection.joinRegion(socket, nextSession.regionId, nextSession.playerId);
 
+          const failedBuilds: BuildingType[] = [];
+
           for (const buildingType of pendingBuildsRef.current) {
-            worldConnection.placeBuilding(socket, nextSession.regionId, nextSession.playerId, buildingType);
+            try {
+              worldConnection.placeBuilding(
+                socket,
+                nextSession.regionId,
+                nextSession.playerId,
+                buildingType,
+              );
+            } catch (error) {
+              console.error('Failed to replay pending build request.', error);
+              failedBuilds.push(buildingType);
+            }
           }
 
-          pendingBuildsRef.current = [];
+          pendingBuildsRef.current = failedBuilds;
         });
 
         socket.addEventListener('message', (event) => {
-          const message = JSON.parse(String(event.data)) as RegionSnapshotMessage;
+          try {
+            const message = JSON.parse(String(event.data)) as unknown;
 
-          if (message.type === 'region.snapshot') {
+            if (!isRegionSnapshotMessage(message)) {
+              console.warn('Ignored unexpected world message.', message);
+              return;
+            }
+
             setIronPlateCount(message.storage['iron-plate'] ?? 0);
+          } catch (error) {
+            console.error('Failed to parse world message.', error);
           }
         });
       } catch {
@@ -105,7 +141,12 @@ export const App = () => {
       return;
     }
 
-    worldConnection.placeBuilding(socketRef.current, session.regionId, session.playerId, buildingType);
+    try {
+      worldConnection.placeBuilding(socketRef.current, session.regionId, session.playerId, buildingType);
+    } catch (error) {
+      console.error('Failed to place building.', error);
+      pendingBuildsRef.current.push(buildingType);
+    }
   };
 
   return (

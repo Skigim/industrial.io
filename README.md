@@ -9,7 +9,7 @@ This repository now contains the first vertical-slice implementation scaffolding
 - Shared contracts, content, transport runtime, simulation, persistence, world service, API service, and client shell are implemented.
 - The current goal is to finish wiring the first playable factory loop end to end.
 
-The current goal is to build a factory-first MVP where players can place a site anchor, extract resources, route items through transport networks, power a compact production chain, and persist region state through an authoritative world service.
+This supports a broader factory-first MVP where players can place a site anchor, extract resources, route items through transport networks, power a compact production chain, and persist region state through an authoritative world service.
 
 ## MVP Direction
 
@@ -54,9 +54,17 @@ Complete the remaining vertical-slice wiring from `docs/superpowers/plans/2026-0
 
 ## Local Development
 
-1. `pnpm install`
+Environment defaults:
+
+- `DATABASE_URL=postgres://industrial:industrial@localhost:5432/industrial`
+- API server: `HOST=127.0.0.1`, `PORT=3001`
+- World server: `HOST=127.0.0.1`, `PORT=3002`
+- Client dev server: `http://127.0.0.1:5173` with optional `VITE_WORLD_WS_URL=ws://127.0.0.1:3002/ws` when bypassing the Vite `/ws` proxy
+
+1. `corepack pnpm install`
 2. `docker compose up -d postgres`
-3. `pnpm --filter @industrial/api dev`
-4. `pnpm --filter @industrial/world dev`
-5. `pnpm --filter @industrial/client dev`
-6. `pnpm --filter @industrial/client playwright test`
+3. Initialize the database schema: `corepack pnpm --filter @industrial/persistence exec drizzle-kit push --config drizzle.config.ts`
+4. Start the API server in its own terminal: `corepack pnpm --filter @industrial/api dev`
+5. Start the world server in a second terminal: `corepack pnpm --filter @industrial/world dev`
+6. Start the client in a third terminal: `corepack pnpm --filter @industrial/client dev`
+7. Run the browser smoke test in another terminal after the three dev servers are up: `corepack pnpm --filter @industrial/client playwright test`

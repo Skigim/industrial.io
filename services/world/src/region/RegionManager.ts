@@ -1,3 +1,4 @@
+import { buildingsById } from '@industrial/content';
 import { regionCycleMs, type RegionState } from '@industrial/sim-core';
 
 import {
@@ -10,6 +11,8 @@ export type JoinRegionRequest = {
   regionId: string;
   playerId: string;
 };
+
+const validBuildingTypes = new Set(Object.keys(buildingsById));
 
 export type PlaceBuildingRequest = JoinRegionRequest & {
   buildingType: string;
@@ -34,6 +37,10 @@ export class RegionManager {
   }
 
   placeBuilding({ regionId, buildingType }: PlaceBuildingRequest): RegionSnapshot {
+    if (!validBuildingTypes.has(buildingType)) {
+      throw new Error(`Unknown building type: ${buildingType}`);
+    }
+
     const region = this.getOrCreateRegion(regionId);
     const nextIndex = region.snapshot.buildings.filter((building) => building.type === buildingType).length + 1;
 
