@@ -10,14 +10,19 @@
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "dev": "tsx watch src/dev.ts",
     "test": "vitest run src/server.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
     "@fastify/websocket": "^11.2.0",
+    "@industrial/contracts": "workspace:*",
     "@industrial/content": "workspace:*",
     "@industrial/sim-core": "workspace:*",
     "@industrial/transport": "workspace:*",
     "fastify": "^5.3.3"
+  },
+  "devDependencies": {
+    "tsx": "^4.20.5"
   }
 }

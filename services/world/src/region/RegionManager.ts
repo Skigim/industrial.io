@@ -1,4 +1,4 @@
-import type { RegionState } from '@industrial/sim-core';
+import { regionCycleMs, type RegionState } from '@industrial/sim-core';
 
 import {
   bootstrapStarterRegion,
@@ -11,9 +11,15 @@ export type JoinRegionRequest = {
   playerId: string;
 };
 
+export type PlaceBuildingRequest = JoinRegionRequest & {
+  buildingType: string;
+};
+
 type ActiveRegion = {
   state: RegionState;
   snapshot: RegionSnapshot;
+  lastTickAt: number;
+  pendingDeltaMs: number;
 };
 
 export class RegionManager {
@@ -23,7 +29,32 @@ export class RegionManager {
 
   joinRegion({ regionId }: JoinRegionRequest): RegionSnapshot {
     const region = this.getOrCreateRegion(regionId);
-    region.state = this.runtimeHost.tick(region.state, 0);
+    this.tickRegion(regionId);
+    return cloneRegionSnapshot(region.snapshot);
+  }
+
+  placeBuilding({ regionId, buildingType }: PlaceBuildingRequest): RegionSnapshot {
+    const region = this.getOrCreateRegion(regionId);
+    const nextIndex = region.snapshot.buildings.filter((building) => building.type === buildingType).length + 1;
+
+    region.snapshot.buildings.push({ id: `${buildingType}-${nextIndex}`, type: buildingType });
+
+    this.tickRegion(regionId);
+    return cloneRegionSnapshot(region.snapshot);
+  }
+
+  tickRegion(regionId: string): RegionSnapshot {
+    const region = this.getOrCreateRegion(regionId);
+    const now = Date.now();
+    const deltaMs = now - region.lastTickAt;
+    const hasStarterFactory = this.hasStarterFactory(region);
+
+    region.pendingDeltaMs = hasStarterFactory ? region.pendingDeltaMs + deltaMs : 0;
+    region.state = this.runtimeHost.tick(region.state, region.pendingDeltaMs);
+    region.lastTickAt = now;
+    region.pendingDeltaMs %= regionCycleMs;
+    region.snapshot.storage = { ...region.state.storage };
+
     return cloneRegionSnapshot(region.snapshot);
   }
 
@@ -35,12 +66,28 @@ export class RegionManager {
     }
 
     const bootstrappedRegion = bootstrapStarterRegion(regionId);
-    this.activeRegions.set(regionId, bootstrappedRegion);
-    return bootstrappedRegion;
+    const activeRegion = {
+      ...bootstrappedRegion,
+      lastTickAt: Date.now(),
+      pendingDeltaMs: 0,
+    };
+
+    this.activeRegions.set(regionId, activeRegion);
+    return activeRegion;
+  }
+
+  private hasStarterFactory(region: ActiveRegion): boolean {
+    const buildingTypes = new Set(region.snapshot.buildings.map((building) => building.type));
+
+    return buildingTypes.has('site-anchor')
+      && buildingTypes.has('burner-generator')
+      && buildingTypes.has('miner')
+      && buildingTypes.has('smelter');
   }
 }
 
 const cloneRegionSnapshot = (snapshot: RegionSnapshot): RegionSnapshot => ({
   regionId: snapshot.regionId,
   buildings: snapshot.buildings.map((building) => ({ ...building })),
+  storage: { ...snapshot.storage },
 });

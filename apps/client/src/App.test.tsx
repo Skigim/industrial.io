@@ -12,5 +12,6 @@ describe('App', () => {
 
     expect(screen.getByText('Build')).toBeInTheDocument();
     expect(screen.getByTestId('game-viewport')).toBeInTheDocument();
+    expect(screen.getByTestId('ui-overlay')).toContainElement(screen.getByText('Industrial.io'));
   });
 });

@@ -4,11 +4,10 @@ Industrial.io is a factory-building online MMO centered on shared-world industry
 
 ## Current Status
 
-This repository is in pre-implementation planning.
+This repository now contains the first vertical-slice implementation scaffolding.
 
-- The core factory MMO design is approved.
-- The first implementation plan is approved.
-- Product code has not been scaffolded yet.
+- Shared contracts, content, transport runtime, simulation, persistence, world service, API service, and client shell are implemented.
+- The current goal is to finish wiring the first playable factory loop end to end.
 
 The current goal is to build a factory-first MVP where players can place a site anchor, extract resources, route items through transport networks, power a compact production chain, and persist region state through an authoritative world service.
 
@@ -51,4 +50,13 @@ This repository uses the Superpowers workflow for design, planning, implementati
 
 ## Next Step
 
-Begin implementation from the approved plan in `docs/superpowers/plans/2026-05-23-core-factory-mmo-implementation-plan.md`.
+Complete the remaining vertical-slice wiring from `docs/superpowers/plans/2026-05-23-core-factory-mmo-implementation-plan.md`.
+
+## Local Development
+
+1. `pnpm install`
+2. `docker compose up -d postgres`
+3. `pnpm --filter @industrial/api dev`
+4. `pnpm --filter @industrial/world dev`
+5. `pnpm --filter @industrial/client dev`
+6. `pnpm --filter @industrial/client playwright test`

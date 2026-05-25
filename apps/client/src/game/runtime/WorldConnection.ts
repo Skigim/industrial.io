@@ -21,4 +21,25 @@ export class WorldConnection {
 
     return new WebSocket(url);
   }
+
+  joinRegion(socket: WebSocket, regionId: string, playerId: string): void {
+    socket.send(JSON.stringify({ type: 'region.join', regionId, playerId }));
+  }
+
+  placeBuilding(
+    socket: WebSocket,
+    regionId: string,
+    playerId: string,
+    buildingType: 'site-anchor' | 'burner-generator' | 'miner' | 'belt' | 'smelter' | 'storage',
+  ): void {
+    socket.send(
+      JSON.stringify({
+        type: 'build.place',
+        regionId,
+        playerId,
+        buildingType,
+        tile: { x: 0, y: 0 },
+      }),
+    );
+  }
 }

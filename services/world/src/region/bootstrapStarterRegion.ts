@@ -4,6 +4,7 @@ import { createStarterRegion, type RegionState } from '@industrial/sim-core';
 export type RegionSnapshot = {
   regionId: string;
   buildings: Array<{ id: string; type: string }>;
+  storage: RegionState['storage'];
 };
 
 export type BootstrappedRegion = {
@@ -24,6 +25,7 @@ export const bootstrapStarterRegion = (regionId: string): BootstrappedRegion => 
     snapshot: {
       regionId: state.id,
       buildings: [{ id: 'site-anchor-1', type: siteAnchor.id }],
+      storage: { ...state.storage },
     },
   };
 };

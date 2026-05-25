@@ -32,6 +32,7 @@ describe('world service', () => {
     const secondSnapshot = await server.joinRegion({ regionId: 'starter-1', playerId: 'player-2' });
 
     expect(secondSnapshot.buildings).toEqual([{ id: 'site-anchor-1', type: 'site-anchor' }]);
+    expect(secondSnapshot.storage['iron-plate']).toBe(0);
   });
 
   it('fails clearly when the starter site-anchor definition is missing', () => {

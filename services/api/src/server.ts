@@ -11,3 +11,11 @@ export const buildApiServer = () => {
 
   return app;
 };
+
+export const startApiServer = async (): Promise<void> => {
+  const app = buildApiServer();
+  const host = process.env.HOST ?? '127.0.0.1';
+  const port = Number(process.env.PORT ?? '3001');
+
+  await app.listen({ host, port });
+};
