@@ -3,8 +3,8 @@ import type { RegionState } from '@industrial/sim-core';
 import {
   bootstrapStarterRegion,
   type RegionSnapshot,
-} from './bootstrapStarterRegion';
-import { RegionRuntimeHost } from './RegionRuntimeHost';
+} from './bootstrapStarterRegion.js';
+import { RegionRuntimeHost } from './RegionRuntimeHost.js';
 
 export type JoinRegionRequest = {
   regionId: string;

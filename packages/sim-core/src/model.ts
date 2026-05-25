@@ -1,4 +1,4 @@
-import { starterPower, starterStorage } from './buildings';
+import { starterPower, starterStorage } from './buildings.js';
 
 export const resourceTypes = ['coal', 'iron-ore', 'iron-plate'] as const;
 

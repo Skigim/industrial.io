@@ -1,4 +1,4 @@
-import { SegmentedBuffer } from './SegmentedBuffer';
+import { SegmentedBuffer } from './SegmentedBuffer.js';
 
 export class TransportArray<T> {
   readonly id: string;

@@ -1,3 +1,3 @@
-export * from './SegmentedBuffer';
-export * from './TransportArray';
-export * from './WakeQueue';
+export * from './SegmentedBuffer.js';
+export * from './TransportArray.js';
+export * from './WakeQueue.js';

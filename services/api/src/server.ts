@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 
-import { registerRegionRoutes } from './routes/regions';
-import { registerSessionRoutes } from './routes/session';
+import { registerRegionRoutes } from './routes/regions.js';
+import { registerSessionRoutes } from './routes/session.js';
 
 export const buildApiServer = () => {
   const app = Fastify();

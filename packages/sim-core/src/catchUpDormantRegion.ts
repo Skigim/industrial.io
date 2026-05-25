@@ -1,6 +1,6 @@
-import { regionCycleMs } from './buildings';
-import type { RegionState } from './model';
-import { stepRegion } from './stepRegion';
+import { regionCycleMs } from './buildings.js';
+import type { RegionState } from './model.js';
+import { stepRegion } from './stepRegion.js';
 
 export const catchUpDormantRegion = (
   region: RegionState,

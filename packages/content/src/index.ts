@@ -1,3 +1,3 @@
-export * from './buildings';
-export * from './items';
-export * from './recipes';
+export * from './buildings.js';
+export * from './items.js';
+export * from './recipes.js';

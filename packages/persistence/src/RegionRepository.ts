@@ -1,10 +1,10 @@
 import { and, eq, notInArray } from 'drizzle-orm';
-import { db } from './db';
+import { db } from './db.js';
 import {
   boundaryBuffers,
   type BoundaryBufferItem,
   regionSnapshots,
-} from './schema';
+} from './schema.js';
 
 export type BoundaryBufferSnapshot = {
   boundaryId: string;
