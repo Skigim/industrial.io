@@ -121,7 +121,9 @@ Every step must contain the actual content an engineer needs. These are **plan f
 
 ## Self-Review
 
-After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
+After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a single-pass checklist you run yourself — not a subagent dispatch. Review the entire plan document once in full before making any fixes.
+
+**Context Isolation:** When dispatching reviewer subagents (e.g., via plan-document-reviewer-prompt.md), pass only the plan file and the relevant spec file. Do not expose full session history or unrelated codebase files to the reviewer subagent.
 
 **1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
 
@@ -129,7 +131,7 @@ After writing the complete plan, look at the spec with fresh eyes and check the 
 
 **3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
-If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
+Complete the full single-pass read of the plan first, noting any issues as you go. Only after finishing the pass, apply fixes to the issues you noted (and add tasks for any missing spec requirements). Do not interleave fixes with reading, and no need to re-review after fixing.
 
 ## Execution Handoff
 

@@ -128,7 +128,11 @@ After the spec review loop passes, ask the user to review the written spec befor
 
 > "Spec written and committed to `<path>`. Please review it and let me know if you want to make any changes before we start writing out the implementation plan."
 
-Wait for the user's response. If they request changes, make them and re-run the spec review loop. Only proceed once the user approves.
+Wait for the user's response. If they request changes, make them and re-run the spec review loop. **Maximum 3 review rounds.** If issues persist after 3 rounds, present them to the user for a decision rather than looping further. Only proceed once the user approves.
+
+**Context Isolation:**
+
+When dispatching subagents (e.g., spec reviewers), pass only the specific spec file or relevant code fragments needed for their immediate task. Do not expose your full session history or unrelated codebase context to spawned subagents.
 
 **Implementation:**
 
