@@ -47,6 +47,19 @@ export const createWorldServer = async (): Promise<WorldServer> => {
       socket.send(JSON.stringify({ type: 'region.snapshot', ...snapshot }));
     };
 
+    const sendPlacementRejected = (
+      buildingType: string,
+      tile: { x: number; y: number },
+      reason: string,
+    ) => {
+      socket.send(JSON.stringify({
+        type: 'build.place.rejected',
+        buildingType,
+        tile,
+        reason,
+      }));
+    };
+
     if (joinRequest) {
       sendSnapshot(regionManager.joinRegion(joinRequest));
     }
@@ -86,6 +99,11 @@ export const createWorldServer = async (): Promise<WorldServer> => {
           sendSnapshot(regionManager.placeBuilding(parsed.data));
         } catch (error) {
           console.error('Failed to place building from websocket message.', error);
+          sendPlacementRejected(
+            parsed.data.buildingType,
+            parsed.data.tile,
+            error instanceof Error ? error.message : 'Failed to place building.',
+          );
           return;
         }
       }

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { WorldConnection } from './WorldConnection';
 
@@ -26,6 +26,28 @@ describe('WorldConnection', () => {
 
     expect(String(FakeWebSocket.lastUrl)).toBe(
       'ws://world.example/socket?regionId=starter-1&playerId=player-1',
+    );
+  });
+
+  it('serializes the selected tile in build placement messages', () => {
+    const send = vi.fn();
+    const socket = {
+      readyState: WebSocket.OPEN,
+      send,
+    } as Pick<WebSocket, 'readyState' | 'send'> as WebSocket;
+
+    const connection = new WorldConnection('ws://world.example/socket');
+
+    connection.placeBuilding(socket, 'starter-1', 'player-1', 'miner', { x: 7, y: 9 });
+
+    expect(send).toHaveBeenCalledWith(
+      JSON.stringify({
+        type: 'build.place',
+        regionId: 'starter-1',
+        playerId: 'player-1',
+        buildingType: 'miner',
+        tile: { x: 7, y: 9 },
+      }),
     );
   });
 });

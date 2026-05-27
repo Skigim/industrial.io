@@ -1,3 +1,5 @@
+import type { PlacementTile } from '../renderer/tileMath';
+
 const getDefaultWorldUrl = (): string => {
   if (import.meta.env.VITE_WORLD_WS_URL) {
     return import.meta.env.VITE_WORLD_WS_URL;
@@ -36,6 +38,7 @@ export class WorldConnection {
     regionId: string,
     playerId: string,
     buildingType: 'site-anchor' | 'burner-generator' | 'miner' | 'belt' | 'smelter' | 'storage',
+    tile: PlacementTile,
   ): void {
     if (socket.readyState !== WebSocket.OPEN) {
       throw new Error('Cannot place a building while the world socket is not open.');
@@ -47,7 +50,7 @@ export class WorldConnection {
         regionId,
         playerId,
         buildingType,
-        tile: { x: 0, y: 0 },
+        tile,
       }),
     );
   }
