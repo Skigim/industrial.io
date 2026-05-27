@@ -59,7 +59,7 @@ Environment defaults:
 - `DATABASE_URL=postgres://industrial:industrial@localhost:5432/industrial`
 - API server: `HOST=127.0.0.1`, `PORT=3001`
 - World server: `HOST=127.0.0.1`, `PORT=3002`
-- Client dev server: `http://127.0.0.1:5173` with optional `VITE_WORLD_WS_URL=ws://127.0.0.1:3002/ws` when bypassing the Vite `/ws` proxy
+- Client dev server: `http://127.0.0.1:5173`; set `VITE_WORLD_WS_URL=ws://127.0.0.1:3002/ws` only when the browser cannot use the default proxied `/ws` endpoint on the Vite dev server, such as from another container, a remote device, or while debugging a direct backend websocket connection
 
 1. `corepack pnpm install`
 2. `docker compose up -d postgres`

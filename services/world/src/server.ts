@@ -82,7 +82,12 @@ export const createWorldServer = async (): Promise<WorldServer> => {
       }
 
       if (parsed.data.type === 'build.place') {
-        sendSnapshot(regionManager.placeBuilding(parsed.data));
+        try {
+          sendSnapshot(regionManager.placeBuilding(parsed.data));
+        } catch (error) {
+          console.error('Failed to place building from websocket message.', error);
+          return;
+        }
       }
     });
 
