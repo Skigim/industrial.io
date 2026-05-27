@@ -116,4 +116,33 @@ describe('GameViewport', () => {
       }),
     );
   });
+
+  it('clears the parent hover state before cancelling placement on right-click', () => {
+    const onHoverTileChange = vi.fn();
+    const onCancelPlacement = vi.fn();
+
+    render(
+      <GameViewport
+        hoveredTile={{ x: 4, y: 6 }}
+        isPlacementModeEnabled
+        regionSnapshot={null}
+        onHoverTileChange={onHoverTileChange}
+        onCancelPlacement={onCancelPlacement}
+        onPlaceBuilding={vi.fn(() => false)}
+      />,
+    );
+
+    const viewport = screen.getByTestId('game-viewport');
+    const contextMenuEvent = new MouseEvent('contextmenu', {
+      bubbles: true,
+      cancelable: true,
+      button: 2,
+    });
+
+    fireEvent(viewport, contextMenuEvent);
+
+    expect(contextMenuEvent.defaultPrevented).toBe(true);
+    expect(onHoverTileChange).toHaveBeenCalledWith(null);
+    expect(onCancelPlacement).toHaveBeenCalledTimes(1);
+  });
 });

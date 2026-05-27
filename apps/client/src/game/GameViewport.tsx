@@ -94,6 +94,7 @@ export const GameViewport = ({
 
     event.preventDefault();
     hoveredTileRef.current = null;
+    hoverChangeRef.current(null);
     onCancelPlacement();
   };
 

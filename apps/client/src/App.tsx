@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { WorldConnection } from './game/runtime/WorldConnection';
 import { GameViewport } from './game/GameViewport';
@@ -271,11 +271,11 @@ export const App = () => {
     setArmedBuildingType(buildingType);
   };
 
-  const handleCancelBuild = () => {
+  const handleCancelBuild = useCallback(() => {
     pendingPlacementRef.current = null;
     setArmedBuildingType(null);
     setHoveredTile(null);
-  };
+  }, []);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {

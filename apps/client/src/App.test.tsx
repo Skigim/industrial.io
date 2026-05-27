@@ -100,6 +100,27 @@ describe('App', () => {
     expect(screen.queryByText('Armed')).not.toBeInTheDocument();
   });
 
+  it('does not re-register the Escape key listener when build state changes', () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      createCanvasContext() as unknown as CanvasRenderingContext2D,
+    );
+    const addEventListenerSpy = vi.spyOn(window, 'addEventListener');
+    const removeEventListenerSpy = vi.spyOn(window, 'removeEventListener');
+
+    render(<App />);
+
+    const minerButton = screen.getByRole('button', { name: 'Miner' });
+
+    fireEvent.click(minerButton);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel Build Tool' }));
+
+    const keydownAdds = addEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'keydown');
+    const keydownRemoves = removeEventListenerSpy.mock.calls.filter(([eventName]) => eventName === 'keydown');
+
+    expect(keydownAdds).toHaveLength(1);
+    expect(keydownRemoves).toHaveLength(0);
+  });
+
   it('arms a building without immediately placing it when a session is active', async () => {
     vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
       createCanvasContext() as unknown as CanvasRenderingContext2D,
