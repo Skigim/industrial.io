@@ -13,6 +13,13 @@ const sectionStyle = {
   display: 'grid',
   gap: '8px',
   minWidth: '220px',
+  color: '#f2f7fb',
+} as const;
+
+const titleStyle = {
+  margin: 0,
+  color: '#f2f7fb',
+  textShadow: '0 1px 2px rgba(0, 0, 0, 0.55)',
 } as const;
 
 const buildButtonStyle = (isArmed: boolean) => ({
@@ -46,7 +53,7 @@ export type BuildPanelProps = {
 
 export const BuildPanel = ({ armedBuildingType = null, onArm, onCancel }: BuildPanelProps) => (
   <section style={sectionStyle}>
-    <h2>Build</h2>
+    <h2 style={titleStyle}>Build</h2>
     {starterBuildings.map((building) => {
       const isArmed = armedBuildingType === building.id;
 

@@ -14,9 +14,9 @@ export default defineConfig({
       timeout: 120000,
     },
     {
-      command: 'corepack pnpm --filter @industrial/world dev',
+      command: 'corepack pnpm --filter @industrial/sim-core build && corepack pnpm --filter @industrial/world exec tsx watch src/dev.playwright.ts',
       port: 3002,
-      reuseExistingServer: true,
+      reuseExistingServer: false,
       timeout: 120000,
     },
     {

@@ -23,7 +23,18 @@ describe('api server', () => {
     expect(body.sessionToken).toEqual(expect.any(String));
     expect(body.sessionToken).toMatch(/^[0-9a-f]+$/);
     expect(body.sessionToken.length).toBe(64);
-    expect(body.regionId).toBe('starter-1');
+    expect(body.regionId).toMatch(/^starter-[0-9a-f-]+$/);
+  });
+
+  it('creates a fresh starter region per guest session', async () => {
+    app = buildApiServer();
+
+    const firstResponse = await app.inject({ method: 'POST', url: '/api/session/guest' });
+    const secondResponse = await app.inject({ method: 'POST', url: '/api/session/guest' });
+
+    expect(firstResponse.statusCode).toBe(200);
+    expect(secondResponse.statusCode).toBe(200);
+    expect(firstResponse.json().regionId).not.toBe(secondResponse.json().regionId);
   });
 
   it('lists the starter region', async () => {

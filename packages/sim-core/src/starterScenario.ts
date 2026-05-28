@@ -1,6 +1,7 @@
 import type {
   BeltState,
   BuildingState,
+  RegionState,
   ResourceNodeState,
   ScenarioState,
   TileCoordinate,
@@ -26,6 +27,13 @@ type StarterScenarioState = {
   resourceNodes: ResourceNodeState[];
   scenario: ScenarioState;
 };
+
+const cloneTileCoordinate = ({ x, y }: TileCoordinate): TileCoordinate => ({ x, y });
+
+const cloneResourceNodeState = (node: ResourceNodeState): ResourceNodeState => ({
+  ...node,
+  tiles: node.tiles.map(cloneTileCoordinate),
+});
 
 export const createStarterScenarioState = (): StarterScenarioState => ({
   buildings: [
@@ -55,9 +63,41 @@ export const createStarterScenarioState = (): StarterScenarioState => ({
     { id: 'belt-3', tile: { x: 16, y: 6 }, itemId: null },
     { id: 'belt-4', tile: { x: 17, y: 6 }, itemId: null },
   ],
-  resourceNodes: [STARTER_IRON_PATCH_NODE],
+  resourceNodes: [cloneResourceNodeState(STARTER_IRON_PATCH_NODE)],
   scenario: {
-    repair: { buildingType: 'belt', tile: STARTER_REPAIR_TILE, isPlaced: false },
+    repair: {
+      buildingType: 'belt',
+      tile: cloneTileCoordinate(STARTER_REPAIR_TILE),
+      isPlaced: false,
+    },
     goal: { current: 0, target: 10, isComplete: false },
   },
 });
+
+export const placeStarterRepair = (
+  region: RegionState,
+  tile: TileCoordinate,
+): RegionState => {
+  if (tile.x !== STARTER_REPAIR_TILE.x || tile.y !== STARTER_REPAIR_TILE.y) {
+    return region;
+  }
+
+  if (
+    region.scenario.repair.isPlaced
+    || region.belts.some((belt) => belt.tile.x === STARTER_REPAIR_TILE.x && belt.tile.y === STARTER_REPAIR_TILE.y)
+  ) {
+    return region;
+  }
+
+  return {
+    ...region,
+    belts: [
+      ...region.belts,
+      { id: 'belt-repair-1', tile: cloneTileCoordinate(STARTER_REPAIR_TILE), itemId: null },
+    ],
+    scenario: {
+      ...region.scenario,
+      repair: { ...region.scenario.repair, isPlaced: true },
+    },
+  };
+};

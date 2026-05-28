@@ -1,8 +1,12 @@
 import { buildingsById } from '@industrial/content';
-import { regionCycleMs, type RegionState } from '@industrial/sim-core';
+import {
+  placeStarterRepair,
+  type RegionState,
+} from '@industrial/sim-core';
 
 import {
   bootstrapStarterRegion,
+  createRegionSnapshot,
   type TileCoordinate,
   type RegionSnapshot,
 } from './bootstrapStarterRegion.js';
@@ -24,7 +28,6 @@ type ActiveRegion = {
   state: RegionState;
   snapshot: RegionSnapshot;
   lastTickAt: number;
-  pendingDeltaMs: number;
 };
 
 export class RegionManager {
@@ -45,31 +48,40 @@ export class RegionManager {
 
     const region = this.getOrCreateRegion(regionId);
 
-    if (buildingType === 'miner' && !this.isOnIronPatch(region.snapshot, tile)) {
-      throw new Error('Miners must be placed on an iron patch tile');
+    if (
+      buildingType !== 'belt'
+      || tile.x !== region.state.scenario.repair.tile.x
+      || tile.y !== region.state.scenario.repair.tile.y
+    ) {
+      throw new Error('Only the highlighted starter gap can be repaired in this scenario');
     }
 
-    const nextIndex = region.snapshot.buildings.filter((building) => building.type === buildingType).length + 1;
+    const now = Date.now();
 
-    region.snapshot.buildings.push({ id: `${buildingType}-${nextIndex}`, type: buildingType, tile });
-
-    this.tickRegion(regionId);
+    region.state = placeStarterRepair(region.state, tile);
+    region.snapshot = createRegionSnapshot(region.state);
+    region.lastTickAt = now;
     return cloneRegionSnapshot(region.snapshot);
   }
 
-  tickRegion(regionId: string): RegionSnapshot {
+  tickRegion(regionId: string, elapsedMs?: number): RegionSnapshot {
     const region = this.getOrCreateRegion(regionId);
     const now = Date.now();
-    const deltaMs = now - region.lastTickAt;
-    const hasStarterFactory = this.hasStarterFactory(region);
+    const deltaMs = elapsedMs ?? (now - region.lastTickAt);
 
-    region.pendingDeltaMs = hasStarterFactory ? region.pendingDeltaMs + deltaMs : 0;
-    region.state = this.runtimeHost.tick(region.state, region.pendingDeltaMs);
+    region.state = this.runtimeHost.tick(region.state, deltaMs);
     region.lastTickAt = now;
-    region.pendingDeltaMs %= regionCycleMs;
-    region.snapshot.storage = { ...region.state.storage };
+    region.snapshot = createRegionSnapshot(region.state);
 
     return cloneRegionSnapshot(region.snapshot);
+  }
+
+  deleteRegion(regionId: string): void {
+    this.activeRegions.delete(regionId);
+  }
+
+  getActiveRegionCount(): number {
+    return this.activeRegions.size;
   }
 
   private getOrCreateRegion(regionId: string): ActiveRegion {
@@ -83,25 +95,10 @@ export class RegionManager {
     const activeRegion = {
       ...bootstrappedRegion,
       lastTickAt: Date.now(),
-      pendingDeltaMs: 0,
     };
 
     this.activeRegions.set(regionId, activeRegion);
     return activeRegion;
-  }
-
-  private hasStarterFactory(region: ActiveRegion): boolean {
-    const buildingTypes = new Set(region.snapshot.buildings.map((building) => building.type));
-
-    return buildingTypes.has('site-anchor')
-      && buildingTypes.has('burner-generator')
-      && buildingTypes.has('miner')
-      && buildingTypes.has('smelter');
-  }
-
-  private isOnIronPatch(snapshot: RegionSnapshot, tile: TileCoordinate): boolean {
-    return snapshot.resourceNodes.some((resourceNode) => resourceNode.resourceType === 'iron-ore'
-      && resourceNode.tiles.some((resourceTile) => resourceTile.x === tile.x && resourceTile.y === tile.y));
   }
 }
 
@@ -111,9 +108,20 @@ const cloneRegionSnapshot = (snapshot: RegionSnapshot): RegionSnapshot => ({
     ...building,
     tile: { ...building.tile },
   })),
+  belts: snapshot.belts.map((belt) => ({
+    ...belt,
+    tile: { ...belt.tile },
+  })),
   resourceNodes: snapshot.resourceNodes.map((resourceNode) => ({
     ...resourceNode,
     tiles: resourceNode.tiles.map((tile) => ({ ...tile })),
   })),
   storage: { ...snapshot.storage },
+  scenario: {
+    ...snapshot.scenario,
+    repair: {
+      ...snapshot.scenario.repair,
+      tile: { ...snapshot.scenario.repair.tile },
+    },
+  },
 });

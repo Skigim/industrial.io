@@ -4,7 +4,7 @@
   "packageManager": "pnpm@10.0.0",
   "scripts": {
     "typecheck": "corepack pnpm -r typecheck",
-    "test": "vitest --workspace vitest.workspace.ts run"
+    "test": "vitest run"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",

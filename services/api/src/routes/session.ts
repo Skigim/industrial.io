@@ -7,6 +7,6 @@ export const registerSessionRoutes = (app: FastifyInstance): void => {
   app.post('/api/session/guest', async () => ({
     playerId: crypto.randomUUID(),
     sessionToken: createSessionToken(),
-    regionId: 'starter-1',
+    regionId: `starter-${crypto.randomUUID()}`,
   }));
 };

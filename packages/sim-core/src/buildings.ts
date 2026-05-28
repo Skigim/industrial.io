@@ -1,9 +1,10 @@
 export const regionCycleMs = 4000;
 
 export const starterStorage = {
-  coal: 4,
+  coal: 26,
   'iron-ore': 0,
-  'iron-plate': 0,
+  'iron-ingot': 0,
+  'construction-part': 0,
 } as const;
 
 export const starterPower = {

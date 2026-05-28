@@ -6,9 +6,16 @@ import { clientMessageSchema } from '@industrial/contracts';
 import { RegionManager, type JoinRegionRequest } from './region/RegionManager.js';
 import type { RegionSnapshot } from './region/bootstrapStarterRegion.js';
 
+const liveTickIntervalMs = 1000;
+
 export type WorldServer = {
   app: ReturnType<typeof Fastify>;
   joinRegion: (request: JoinRegionRequest) => Promise<RegionSnapshot>;
+  getActiveRegionCount: () => number;
+};
+
+export type CreateWorldServerOptions = {
+  liveSimulationSpeedMultiplier?: number;
 };
 
 const readJoinRegionRequest = (query: unknown): JoinRegionRequest | null => {
@@ -31,9 +38,29 @@ const readJoinRegionRequest = (query: unknown): JoinRegionRequest | null => {
   };
 };
 
-export const createWorldServer = async (): Promise<WorldServer> => {
+export const createWorldServer = async (
+  options: CreateWorldServerOptions = {},
+): Promise<WorldServer> => {
   const app = Fastify();
   const regionManager = new RegionManager();
+  const regionConnectionCounts = new Map<string, number>();
+  const liveSimulationSpeedMultiplier = options.liveSimulationSpeedMultiplier ?? 1;
+
+  const retainRegion = (regionId: string) => {
+    regionConnectionCounts.set(regionId, (regionConnectionCounts.get(regionId) ?? 0) + 1);
+  };
+
+  const releaseRegion = (regionId: string) => {
+    const nextCount = (regionConnectionCounts.get(regionId) ?? 1) - 1;
+
+    if (nextCount > 0) {
+      regionConnectionCounts.set(regionId, nextCount);
+      return;
+    }
+
+    regionConnectionCounts.delete(regionId);
+    regionManager.deleteRegion(regionId);
+  };
 
   await app.register(websocket);
 
@@ -41,7 +68,8 @@ export const createWorldServer = async (): Promise<WorldServer> => {
 
   app.get('/ws', { websocket: true }, (socket, request) => {
     const joinRequest = readJoinRegionRequest(request.query);
-    let joinedRegionId = joinRequest?.regionId;
+    let joinedRegionId: string | undefined;
+    let retainedRegionId: string | undefined;
 
     const sendSnapshot = (snapshot: RegionSnapshot) => {
       socket.send(JSON.stringify({ type: 'region.snapshot', ...snapshot }));
@@ -60,8 +88,22 @@ export const createWorldServer = async (): Promise<WorldServer> => {
       }));
     };
 
+    const joinRegion = (nextJoinRequest: JoinRegionRequest) => {
+      if (retainedRegionId !== nextJoinRequest.regionId) {
+        if (retainedRegionId) {
+          releaseRegion(retainedRegionId);
+        }
+
+        retainRegion(nextJoinRequest.regionId);
+        retainedRegionId = nextJoinRequest.regionId;
+      }
+
+      joinedRegionId = nextJoinRequest.regionId;
+      sendSnapshot(regionManager.joinRegion(nextJoinRequest));
+    };
+
     if (joinRequest) {
-      sendSnapshot(regionManager.joinRegion(joinRequest));
+      joinRegion(joinRequest);
     }
 
     const interval = setInterval(() => {
@@ -69,8 +111,15 @@ export const createWorldServer = async (): Promise<WorldServer> => {
         return;
       }
 
-      sendSnapshot(regionManager.tickRegion(joinedRegionId));
-    }, 1000);
+      sendSnapshot(
+        regionManager.tickRegion(
+          joinedRegionId,
+          liveSimulationSpeedMultiplier === 1
+            ? undefined
+            : liveTickIntervalMs * liveSimulationSpeedMultiplier,
+        ),
+      );
+    }, liveTickIntervalMs);
 
     socket.on('message', (rawMessage: Buffer) => {
       let message: unknown;
@@ -89,12 +138,20 @@ export const createWorldServer = async (): Promise<WorldServer> => {
       }
 
       if (parsed.data.type === 'region.join') {
-        joinedRegionId = parsed.data.regionId;
-        sendSnapshot(regionManager.joinRegion(parsed.data));
+        joinRegion(parsed.data);
         return;
       }
 
       if (parsed.data.type === 'build.place') {
+        if (parsed.data.regionId !== joinedRegionId) {
+          sendPlacementRejected(
+            parsed.data.buildingType,
+            parsed.data.tile,
+            'Build placement region does not match the joined region.',
+          );
+          return;
+        }
+
         try {
           sendSnapshot(regionManager.placeBuilding(parsed.data));
         } catch (error) {
@@ -111,17 +168,25 @@ export const createWorldServer = async (): Promise<WorldServer> => {
 
     socket.on('close', () => {
       clearInterval(interval);
+
+      if (retainedRegionId) {
+        releaseRegion(retainedRegionId);
+        retainedRegionId = undefined;
+      }
     });
   });
 
   return {
     app,
     joinRegion: async (request: JoinRegionRequest) => regionManager.joinRegion(request),
+    getActiveRegionCount: () => regionManager.getActiveRegionCount(),
   };
 };
 
-export const startWorldServer = async (): Promise<void> => {
-  const server = await createWorldServer();
+export const startWorldServer = async (
+  options: CreateWorldServerOptions = {},
+): Promise<void> => {
+  const server = await createWorldServer(options);
   const host = process.env.HOST ?? '127.0.0.1';
   const port = Number(process.env.PORT ?? '3002');
 

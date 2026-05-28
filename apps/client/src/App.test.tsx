@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import '@testing-library/jest-dom/vitest';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const worldConnectionMocks = vi.hoisted(() => ({
@@ -16,17 +16,40 @@ vi.mock('./game/runtime/WorldConnection', () => ({
 
 import { App } from './App';
 
-type FakeCanvasContext = Pick<CanvasRenderingContext2D, 'clearRect' | 'strokeRect' | 'fillRect'> & {
+type FakeCanvasContext = Pick<
+  CanvasRenderingContext2D,
+  | 'arc'
+  | 'beginPath'
+  | 'clearRect'
+  | 'closePath'
+  | 'fill'
+  | 'fillRect'
+  | 'lineTo'
+  | 'moveTo'
+  | 'rect'
+  | 'stroke'
+  | 'strokeRect'
+> & {
   strokeStyle: string;
   fillStyle: string;
+  lineWidth: number;
 };
 
 const createCanvasContext = (): FakeCanvasContext => ({
+  arc: vi.fn(),
+  beginPath: vi.fn(),
   clearRect: vi.fn(),
-  strokeRect: vi.fn(),
+  closePath: vi.fn(),
+  fill: vi.fn(),
   fillRect: vi.fn(),
+  lineTo: vi.fn(),
+  moveTo: vi.fn(),
+  rect: vi.fn(),
+  stroke: vi.fn(),
+  strokeRect: vi.fn(),
   strokeStyle: '',
   fillStyle: '',
+  lineWidth: 1,
 });
 
 type FakeSocket = {
@@ -71,6 +94,11 @@ describe('App', () => {
     expect(screen.getByText('Build')).toBeInTheDocument();
     expect(screen.getByTestId('game-viewport')).toBeInTheDocument();
     expect(screen.getByTestId('ui-overlay')).toContainElement(screen.getByText('Industrial.io'));
+    const visualKey = screen.getByRole('region', { name: 'Visual key' });
+
+    expect(visualKey).toBeInTheDocument();
+    expect(within(visualKey).getByText('Smelter')).toBeInTheDocument();
+    expect(within(visualKey).getByText('Constructor')).toBeInTheDocument();
   });
 
   it('arms a building from the build panel and cancels it', () => {
@@ -230,6 +258,7 @@ describe('App', () => {
           regionId: 'region-1',
           storage: { 'iron-plate': 0 },
           buildings: [{ id: 'miner-1', type: 'miner', tile: { x: 3, y: 2 } }],
+          belts: [],
           resourceNodes: [
             {
               id: 'starter-iron-patch',
@@ -237,6 +266,11 @@ describe('App', () => {
               tiles: [{ x: 3, y: 2 }],
             },
           ],
+          scenario: {
+            current: 0,
+            target: 10,
+            isComplete: false,
+          },
         }),
       }),
     );
@@ -249,6 +283,98 @@ describe('App', () => {
     fireEvent.click(viewport);
 
     expect(worldConnectionMocks.placeBuilding).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears pending placement state after a successful belt placement confirmed by belts', async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      createCanvasContext() as unknown as CanvasRenderingContext2D,
+    );
+
+    const socket = createFakeSocket();
+
+    worldConnectionMocks.connect.mockReturnValue(socket as unknown as WebSocket);
+
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        playerId: 'player-1',
+        regionId: 'region-1',
+      }),
+    } as Response);
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith('/api/session/guest', { method: 'POST' });
+      expect(worldConnectionMocks.connect).toHaveBeenCalledWith('region-1', 'player-1');
+    });
+
+    socket.emit('open');
+
+    await waitFor(() => {
+      expect(worldConnectionMocks.joinRegion).toHaveBeenCalledWith(
+        socket,
+        'region-1',
+        'player-1',
+      );
+    });
+
+    const beltButton = screen.getByRole('button', { name: 'Belt' });
+    const viewport = screen.getByTestId('game-viewport');
+
+    fireEvent.click(beltButton);
+    fireEvent(viewport, new MouseEvent('pointermove', { clientX: 96, clientY: 64 }));
+    fireEvent.click(viewport);
+
+    expect(worldConnectionMocks.placeBuilding).toHaveBeenCalledTimes(1);
+    expect(worldConnectionMocks.placeBuilding).toHaveBeenCalledWith(
+      socket,
+      'region-1',
+      'player-1',
+      'belt',
+      { x: 3, y: 2 },
+    );
+
+    socket.emit(
+      'message',
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'region.snapshot',
+          regionId: 'region-1',
+          storage: { 'iron-plate': 0 },
+          buildings: [],
+          belts: [{ id: 'belt-1', tile: { x: 3, y: 2 }, itemId: null }],
+          resourceNodes: [
+            {
+              id: 'starter-iron-patch',
+              resourceType: 'iron-ore',
+              tiles: [{ x: 3, y: 2 }],
+            },
+          ],
+          scenario: {
+            current: 0,
+            target: 10,
+            isComplete: false,
+          },
+        }),
+      }),
+    );
+
+    await waitFor(() => {
+      expect(beltButton).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    fireEvent.click(viewport);
+
+    expect(worldConnectionMocks.placeBuilding).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(beltButton);
+    fireEvent(viewport, new MouseEvent('pointermove', { clientX: 96, clientY: 64 }));
+    fireEvent.click(viewport);
+
+    expect(worldConnectionMocks.placeBuilding).toHaveBeenCalledTimes(2);
   });
 
   it('keeps the build tool armed after asynchronous placement rejection and cancels it with Escape', async () => {

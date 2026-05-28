@@ -21,21 +21,55 @@ const originalResizeObserver = globalThis.ResizeObserver;
 
 type FakeCanvasMethod = ReturnType<typeof vi.fn>;
 
+type FillRectDraw = {
+  fillStyle: string;
+  args: [number, number, number, number];
+};
+
 type FakeCanvasContext = {
   clearRect: FakeCanvasMethod;
   strokeRect: FakeCanvasMethod;
   fillRect: FakeCanvasMethod;
+  beginPath: FakeCanvasMethod;
+  closePath: FakeCanvasMethod;
+  moveTo: FakeCanvasMethod;
+  lineTo: FakeCanvasMethod;
+  arc: FakeCanvasMethod;
+  rect: FakeCanvasMethod;
+  fill: FakeCanvasMethod;
+  stroke: FakeCanvasMethod;
   strokeStyle: string;
   fillStyle: string;
+  lineWidth: number;
+  fillRectDraws: FillRectDraw[];
 };
 
-const createCanvasContext = (): FakeCanvasContext => ({
-  clearRect: vi.fn(),
-  strokeRect: vi.fn(),
-  fillRect: vi.fn(),
-  strokeStyle: '',
-  fillStyle: '',
-});
+const createCanvasContext = (): FakeCanvasContext => {
+  const context: FakeCanvasContext = {
+    clearRect: vi.fn(),
+    strokeRect: vi.fn(),
+    fillRect: vi.fn((x: number, y: number, width: number, height: number) => {
+      context.fillRectDraws.push({
+        fillStyle: context.fillStyle,
+        args: [x, y, width, height],
+      });
+    }),
+    beginPath: vi.fn(),
+    closePath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    arc: vi.fn(),
+    rect: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
+    strokeStyle: '',
+    fillStyle: '',
+    lineWidth: 1,
+    fillRectDraws: [],
+  };
+
+  return context;
+};
 
 afterEach(() => {
   globalThis.ResizeObserver = originalResizeObserver;
@@ -252,7 +286,7 @@ describe('createRenderer', () => {
     cleanup();
   });
 
-  it('draws resource nodes and placed buildings on tile-aligned world coordinates beneath the hover preview', () => {
+  it('draws recognizable resource patches, top-down machines, belts, and cargo beneath the hover preview', () => {
     globalThis.ResizeObserver = FakeResizeObserver as unknown as typeof ResizeObserver;
 
     const context = createCanvasContext();
@@ -276,24 +310,92 @@ describe('createRenderer', () => {
 
     const cleanup = createRenderer(
       container,
-      { hoveredTile: { x: 4, y: 6 } },
+      { hoveredTile: { x: 14, y: 6 } },
       {
         regionId: 'region-1',
-        storage: { 'iron-plate': 3 },
-        buildings: [{ id: 'belt-1', type: 'belt', tile: { x: 3, y: 2 } }],
+        storage: { coal: 4, 'iron-ore': 0, 'iron-ingot': 0, 'construction-part': 3 },
+        buildings: [
+          { id: 'site-anchor-1', type: 'site-anchor', tile: { x: 11, y: 6 }, status: 'running' },
+          { id: 'miner-1', type: 'miner', tile: { x: 12, y: 6 }, status: 'running' },
+          { id: 'smelter-1', type: 'smelter', tile: { x: 13, y: 6 }, status: 'running' },
+          { id: 'constructor-1', type: 'constructor', tile: { x: 15, y: 6 }, status: 'blocked' },
+          { id: 'storage-1', type: 'storage', tile: { x: 17, y: 6 }, status: 'idle' },
+        ],
+        belts: [{ id: 'belt-3', tile: { x: 16, y: 6 }, itemId: 'construction-part' }],
         resourceNodes: [
           {
             id: 'starter-iron-patch',
             resourceType: 'iron-ore',
-            tiles: [{ x: 1, y: 1 }],
+            tiles: [{ x: 10, y: 6 }],
           },
         ],
+        scenario: { current: 3, target: 10, isComplete: false },
       },
     );
 
-    expect(context.fillRect).toHaveBeenNthCalledWith(1, 32, 32, 32, 32);
-    expect(context.fillRect).toHaveBeenNthCalledWith(2, 96, 64, 32, 32);
-    expect(context.fillRect).toHaveBeenNthCalledWith(3, 128, 192, 32, 32);
+    expect(context.fillRectDraws).toContainEqual({
+      fillStyle: '#141a20',
+      args: [320, 192, 32, 32],
+    });
+    expect(context.fillRectDraws).toContainEqual({
+      fillStyle: '#26323d',
+      args: [514, 204, 28, 8],
+    });
+    expect(context.arc).toHaveBeenCalledWith(400, 208, 7, 0, Math.PI * 2);
+    expect(context.arc).toHaveBeenCalledWith(432, 208, 7, 0, Math.PI * 2);
+    expect(context.arc).toHaveBeenCalledWith(528, 208, 6, 0, Math.PI * 2);
+    expect(context.rect).toHaveBeenCalledWith(488, 200, 16, 16);
+    expect(context.lineTo).toHaveBeenCalledWith(523, 198);
+    expect(context.fillRectDraws.at(-1)).toEqual({
+      fillStyle: 'rgba(111, 208, 255, 0.2)',
+      args: [448, 192, 32, 32],
+    });
+
+    cleanup();
+  });
+
+  it('draws an obvious marker on the unrepaired starter belt gap', () => {
+    const context = createCanvasContext();
+
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(
+      context as unknown as CanvasRenderingContext2D,
+    );
+
+    const container = document.createElement('div');
+
+    Object.defineProperty(container, 'clientWidth', {
+      configurable: true,
+      get: () => 640,
+    });
+    Object.defineProperty(container, 'clientHeight', {
+      configurable: true,
+      get: () => 480,
+    });
+
+    document.body.appendChild(container);
+
+    const cleanup = createRenderer(container, undefined, {
+      regionId: 'region-1',
+      storage: {},
+      buildings: [],
+      belts: [],
+      resourceNodes: [],
+      scenario: {
+        current: 0,
+        target: 10,
+        isComplete: false,
+        repair: {
+          buildingType: 'belt',
+          tile: { x: 14, y: 6 },
+          isPlaced: false,
+        },
+      },
+    });
+
+    expect(context.fillRectDraws).toContainEqual({
+      fillStyle: 'rgba(255, 215, 94, 0.28)',
+      args: [448, 192, 32, 32],
+    });
 
     cleanup();
   });

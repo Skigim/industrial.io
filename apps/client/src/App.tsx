@@ -60,6 +60,91 @@ const isPlacementTile = (value: unknown): value is PlacementTile => {
   return Number.isInteger(candidate.x) && Number.isInteger(candidate.y);
 };
 
+const isVisibleBuilding = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidateBuilding = value as {
+    id?: unknown;
+    type?: unknown;
+    tile?: unknown;
+    status?: unknown;
+  };
+
+  return typeof candidateBuilding.id === 'string'
+    && typeof candidateBuilding.type === 'string'
+    && isPlacementTile(candidateBuilding.tile)
+    && (candidateBuilding.status === undefined || typeof candidateBuilding.status === 'string');
+};
+
+const isVisibleBelt = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidateBelt = value as {
+    id?: unknown;
+    tile?: unknown;
+    itemId?: unknown;
+  };
+
+  return typeof candidateBelt.id === 'string'
+    && isPlacementTile(candidateBelt.tile)
+    && (candidateBelt.itemId === null || typeof candidateBelt.itemId === 'string');
+};
+
+const isVisibleResourceNode = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidateResourceNode = value as {
+    id?: unknown;
+    resourceType?: unknown;
+    tiles?: unknown;
+  };
+
+  return typeof candidateResourceNode.id === 'string'
+    && typeof candidateResourceNode.resourceType === 'string'
+    && Array.isArray(candidateResourceNode.tiles)
+    && candidateResourceNode.tiles.every(isPlacementTile);
+};
+
+const isVisibleScenario = (value: unknown): boolean => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidateScenario = value as {
+    current?: unknown;
+    target?: unknown;
+    isComplete?: unknown;
+    repair?: unknown;
+  };
+
+  const repairIsValid = candidateScenario.repair === undefined || (() => {
+    if (!candidateScenario.repair || typeof candidateScenario.repair !== 'object') {
+      return false;
+    }
+
+    const repair = candidateScenario.repair as {
+      buildingType?: unknown;
+      tile?: unknown;
+      isPlaced?: unknown;
+    };
+
+    return typeof repair.buildingType === 'string'
+      && isPlacementTile(repair.tile)
+      && typeof repair.isPlaced === 'boolean';
+  })();
+
+  return Number.isInteger(candidateScenario.current)
+    && Number.isInteger(candidateScenario.target)
+    && typeof candidateScenario.isComplete === 'boolean'
+    && repairIsValid;
+};
+
 const isRegionSnapshotMessage = (value: unknown): value is RegionSnapshotMessage => {
   if (!value || typeof value !== 'object') {
     return false;
@@ -70,7 +155,9 @@ const isRegionSnapshotMessage = (value: unknown): value is RegionSnapshotMessage
     regionId?: unknown;
     storage?: unknown;
     buildings?: unknown;
+    belts?: unknown;
     resourceNodes?: unknown;
+    scenario?: unknown;
   };
 
   if (
@@ -79,7 +166,9 @@ const isRegionSnapshotMessage = (value: unknown): value is RegionSnapshotMessage
     || !candidate.storage
     || typeof candidate.storage !== 'object'
     || !Array.isArray(candidate.buildings)
+    || !Array.isArray(candidate.belts)
     || !Array.isArray(candidate.resourceNodes)
+    || !isVisibleScenario(candidate.scenario)
   ) {
     return false;
   }
@@ -90,42 +179,13 @@ const isRegionSnapshotMessage = (value: unknown): value is RegionSnapshotMessage
     return false;
   }
 
-  const buildingsAreValid = candidate.buildings.every((building) => {
-    if (!building || typeof building !== 'object') {
-      return false;
-    }
-
-    const candidateBuilding = building as {
-      id?: unknown;
-      type?: unknown;
-      tile?: unknown;
-    };
-
-    return typeof candidateBuilding.id === 'string'
-      && typeof candidateBuilding.type === 'string'
-      && isPlacementTile(candidateBuilding.tile);
-  });
+  const buildingsAreValid = candidate.buildings.every(isVisibleBuilding);
 
   if (!buildingsAreValid) {
     return false;
   }
 
-  return candidate.resourceNodes.every((resourceNode) => {
-    if (!resourceNode || typeof resourceNode !== 'object') {
-      return false;
-    }
-
-    const candidateResourceNode = resourceNode as {
-      id?: unknown;
-      resourceType?: unknown;
-      tiles?: unknown;
-    };
-
-    return typeof candidateResourceNode.id === 'string'
-      && typeof candidateResourceNode.resourceType === 'string'
-      && Array.isArray(candidateResourceNode.tiles)
-      && candidateResourceNode.tiles.every(isPlacementTile);
-  });
+  return candidate.belts.every(isVisibleBelt) && candidate.resourceNodes.every(isVisibleResourceNode);
 };
 
 const isPlacementRejectedMessage = (value: unknown): value is PlacementRejectedMessage => {
@@ -152,7 +212,6 @@ const areTilesEqual = (left: PlacementTile, right: PlacementTile): boolean => (
 
 export const App = () => {
   const [session, setSession] = useState<GuestSession | null>(null);
-  const [ironPlateCount, setIronPlateCount] = useState(0);
   const [regionSnapshot, setRegionSnapshot] = useState<VisibleRegionSnapshot | null>(null);
   const [armedBuildingType, setArmedBuildingType] = useState<BuildingType | null>(null);
   const [hoveredTile, setHoveredTile] = useState<PlacementTile | null>(null);
@@ -234,16 +293,23 @@ export const App = () => {
               regionId: message.regionId,
               storage: message.storage,
               buildings: message.buildings,
+              belts: message.belts,
               resourceNodes: message.resourceNodes,
+              scenario: message.scenario,
             });
-            setIronPlateCount(message.storage['iron-plate'] ?? 0);
+
+            const placementWasConfirmed = pendingPlacementRef.current
+              && (
+                pendingPlacementRef.current.buildingType === 'belt'
+                  ? message.belts.some((belt) => areTilesEqual(belt.tile, pendingPlacementRef.current!.tile))
+                  : message.buildings.some((building) => (
+                    building.type === pendingPlacementRef.current?.buildingType
+                    && areTilesEqual(building.tile, pendingPlacementRef.current.tile)
+                  ))
+              );
 
             if (
-              pendingPlacementRef.current
-              && message.buildings.some((building) => (
-                building.type === pendingPlacementRef.current?.buildingType
-                && areTilesEqual(building.tile, pendingPlacementRef.current.tile)
-              ))
+              placementWasConfirmed
             ) {
               pendingPlacementRef.current = null;
               setArmedBuildingType(null);
@@ -328,7 +394,7 @@ export const App = () => {
       />
       <div data-testid="ui-overlay" style={overlayStyle}>
         <div style={overlayPanelStyle}>
-          <Hud ironPlateCount={ironPlateCount} />
+          <Hud scenario={regionSnapshot?.scenario} />
         </div>
         <div style={overlayPanelStyle}>
           <BuildPanel

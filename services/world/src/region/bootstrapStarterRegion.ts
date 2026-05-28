@@ -1,5 +1,9 @@
 import { buildingsById } from '@industrial/content';
-import { createStarterRegion, type RegionState } from '@industrial/sim-core';
+import {
+  createStarterRegion,
+  STARTER_IRON_PATCH_TILES as starterIronPatchTiles,
+  type RegionState,
+} from '@industrial/sim-core';
 
 export type TileCoordinate = {
   x: number;
@@ -12,17 +16,36 @@ export type BuildingSnapshot = {
   tile: TileCoordinate;
 };
 
+export type BeltSnapshot = {
+  id: string;
+  tile: TileCoordinate;
+  itemId: string | null;
+};
+
 export type ResourceNodeSnapshot = {
   id: string;
-  resourceType: 'iron-ore';
+  resourceType: RegionState['resourceNodes'][number]['resourceType'];
   tiles: TileCoordinate[];
+};
+
+export type ScenarioSnapshot = {
+  current: number;
+  target: number;
+  isComplete: boolean;
+  repair: {
+    buildingType: string;
+    tile: TileCoordinate;
+    isPlaced: boolean;
+  };
 };
 
 export type RegionSnapshot = {
   regionId: string;
   buildings: BuildingSnapshot[];
+  belts: BeltSnapshot[];
   resourceNodes: ResourceNodeSnapshot[];
   storage: RegionState['storage'];
+  scenario: ScenarioSnapshot;
 };
 
 export type BootstrappedRegion = {
@@ -30,37 +53,51 @@ export type BootstrappedRegion = {
   snapshot: RegionSnapshot;
 };
 
-export const STARTER_SITE_ANCHOR_TILE: TileCoordinate = { x: 6, y: 6 };
-export const STARTER_IRON_PATCH_TILES: TileCoordinate[] = [
-  { x: 10, y: 6 },
-  { x: 11, y: 6 },
-  { x: 10, y: 7 },
-  { x: 11, y: 7 },
-];
+export const STARTER_IRON_PATCH_TILES: TileCoordinate[] = starterIronPatchTiles.map((tile) => ({ ...tile }));
 
 const cloneTile = (tile: TileCoordinate): TileCoordinate => ({ ...tile });
 
+export const createRegionSnapshot = (state: RegionState): RegionSnapshot => ({
+  regionId: state.id,
+  buildings: state.buildings.map((building) => ({
+    id: building.id,
+    type: building.type,
+    tile: cloneTile(building.tile),
+  })),
+  belts: state.belts.map((belt) => ({
+    id: belt.id,
+    tile: cloneTile(belt.tile),
+    itemId: belt.itemId,
+  })),
+  resourceNodes: state.resourceNodes.map((resourceNode) => ({
+    id: resourceNode.id,
+    resourceType: resourceNode.resourceType,
+    tiles: resourceNode.tiles.map(cloneTile),
+  })),
+  storage: { ...state.storage },
+  scenario: {
+    current: state.scenario.goal.current,
+    target: state.scenario.goal.target,
+    isComplete: state.scenario.goal.isComplete,
+    repair: {
+      buildingType: state.scenario.repair.buildingType,
+      tile: cloneTile(state.scenario.repair.tile),
+      isPlaced: state.scenario.repair.isPlaced,
+    },
+  },
+});
+
 export const bootstrapStarterRegion = (regionId: string): BootstrappedRegion => {
-  const state = createStarterRegion({ id: regionId });
   const siteAnchor = buildingsById['site-anchor'];
 
   if (!siteAnchor) {
     throw new Error('Missing site-anchor building definition');
   }
 
+  const state = createStarterRegion({ id: regionId });
+
   return {
     state,
-    snapshot: {
-      regionId: state.id,
-      buildings: [{ id: 'site-anchor-1', type: siteAnchor.id, tile: cloneTile(STARTER_SITE_ANCHOR_TILE) }],
-      resourceNodes: [
-        {
-          id: 'starter-iron-patch',
-          resourceType: 'iron-ore',
-          tiles: STARTER_IRON_PATCH_TILES.map(cloneTile),
-        },
-      ],
-      storage: { ...state.storage },
-    },
+    snapshot: createRegionSnapshot(state),
   };
 };

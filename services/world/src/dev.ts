@@ -1,3 +1,3 @@
 import { startWorldServer } from './server.js';
 
-void startWorldServer();
+void startWorldServer({ liveSimulationSpeedMultiplier: 8 });

@@ -6,25 +6,21 @@ const toViewportPosition = (tile: { x: number; y: number }) => ({
   y: tile.y * tileSizePx + tileSizePx / 2,
 });
 
-test('player can place starter buildings on tiles and produce iron plate', async ({ page }) => {
+test('player repairs the starter line and completes the scenario', async ({ page }) => {
   await page.goto('/');
 
   const viewport = page.getByTestId('game-viewport');
-  const starterPlacements = [
-    { name: 'Burner Generator', tile: { x: 8, y: 7 } },
-    { name: 'Miner', tile: { x: 10, y: 6 } },
-    { name: 'Smelter', tile: { x: 12, y: 7 } },
-  ] as const;
+  const beltButton = page.getByRole('button', { name: 'Belt' });
+  const repairPosition = toViewportPosition({ x: 14, y: 6 });
 
   await expect(viewport).toBeVisible();
 
-  for (const placement of starterPlacements) {
-    const position = toViewportPosition(placement.tile);
+  await beltButton.click();
+  await expect(beltButton).toHaveAttribute('aria-pressed', 'true');
+  await viewport.hover({ position: repairPosition });
+  await viewport.click({ position: repairPosition });
+  await expect(beltButton).toHaveAttribute('aria-pressed', 'false');
 
-    await page.getByRole('button', { name: placement.name }).click();
-    await viewport.hover({ position });
-    await viewport.click({ position });
-  }
-
-  await expect(page.getByText(/Iron Plate: 1|Iron Plate: 2/)).toBeVisible({ timeout: 10000 });
+  await expect(page.getByText('Construction Parts: 10 / 10')).toBeVisible({ timeout: 20000 });
+  await expect(page.getByText('Starter line complete')).toBeVisible();
 });

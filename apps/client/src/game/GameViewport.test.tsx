@@ -28,6 +28,7 @@ describe('GameViewport', () => {
           regionId: 'region-1',
           storage: { 'iron-plate': 3 },
           buildings: [{ id: 'belt-1', type: 'belt', tile: { x: 8, y: 6 } }],
+          belts: [{ id: 'transport-1', tile: { x: 9, y: 6 }, itemId: 'iron-ore' }],
           resourceNodes: [
             {
               id: 'starter-iron-patch',
@@ -35,6 +36,11 @@ describe('GameViewport', () => {
               tiles: [{ x: 10, y: 6 }],
             },
           ],
+          scenario: {
+            current: 3,
+            target: 10,
+            isComplete: false,
+          },
         }}
         onHoverTileChange={vi.fn()}
         onCancelPlacement={vi.fn()}
@@ -49,6 +55,7 @@ describe('GameViewport', () => {
         regionId: 'region-1',
         storage: { 'iron-plate': 3 },
         buildings: [{ id: 'belt-1', type: 'belt', tile: { x: 8, y: 6 } }],
+        belts: [{ id: 'transport-1', tile: { x: 9, y: 6 }, itemId: 'iron-ore' }],
         resourceNodes: [
           {
             id: 'starter-iron-patch',
@@ -56,6 +63,11 @@ describe('GameViewport', () => {
             tiles: [{ x: 10, y: 6 }],
           },
         ],
+        scenario: {
+          current: 3,
+          target: 10,
+          isComplete: false,
+        },
       },
     );
   });
@@ -69,7 +81,13 @@ describe('GameViewport', () => {
           regionId: 'region-1',
           storage: { 'iron-plate': 3 },
           buildings: [],
+          belts: [],
           resourceNodes: [],
+          scenario: {
+            current: 3,
+            target: 10,
+            isComplete: false,
+          },
         }}
         onHoverTileChange={vi.fn()}
         onCancelPlacement={vi.fn()}
@@ -96,7 +114,13 @@ describe('GameViewport', () => {
           regionId: 'region-1',
           storage: { 'iron-plate': 4 },
           buildings: [{ id: 'belt-1', type: 'belt', tile: { x: 8, y: 6 } }],
+          belts: [{ id: 'transport-1', tile: { x: 9, y: 6 }, itemId: 'iron-ore' }],
           resourceNodes: [],
+          scenario: {
+            current: 4,
+            target: 10,
+            isComplete: false,
+          },
         }}
         onHoverTileChange={vi.fn()}
         onCancelPlacement={vi.fn()}
@@ -113,6 +137,12 @@ describe('GameViewport', () => {
       expect.objectContaining({
         storage: { 'iron-plate': 4 },
         buildings: [{ id: 'belt-1', type: 'belt', tile: { x: 8, y: 6 } }],
+        belts: [{ id: 'transport-1', tile: { x: 9, y: 6 }, itemId: 'iron-ore' }],
+        scenario: {
+          current: 4,
+          target: 10,
+          isComplete: false,
+        },
       }),
     );
   });
